@@ -245,65 +245,75 @@ struct SidebarView: View {
         List {
             Section("Conversations") {
                 ForEach(chatManager.getConversations()) { conversation in
-                    Button(action: {
-                        chatManager.loadConversation(conversation)
-                    }) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(conversation.title)
-                                .font(.subheadline)
-                                .lineLimit(1)
-                            Text(conversation.updatedAt, style: .relative)
+                    HStack {
+                        Button(action: {
+                            chatManager.loadConversation(conversation)
+                        }) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(conversation.title)
+                                    .font(.subheadline)
+                                    .lineLimit(1)
+                                Text(conversation.updatedAt, style: .relative)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        
+                        Spacer()
+                        
+                        Button(action: {
+                            chatManager.deleteConversation(conversation.id)
+                        }) {
+                            Image(systemName: "trash")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
-                    }
-                    .buttonStyle(.plain)
-                    .contextMenu {
-                        Button("Delete") {
-                            chatManager.deleteConversation(conversation.id)
-                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }
             
             Section("Actions") {
-                Button(action: { chatManager.startNewChat() }) {
+                Button(action: {
+                    print("[Sidebar] New Chat button pressed")
+                    chatManager.startNewChat()
+                }) {
                     Label("New Chat", systemImage: "plus.circle")
                 }
                 .buttonStyle(.plain)
                 
-                Button(action: { appState.showMemoryBrowser = true }) {
+                Button(action: {
+                    appState.showMemoryBrowser = true
+                }) {
                     Label("Memory Browser", systemImage: "brain")
                 }
                 .buttonStyle(.plain)
                 
-                Button(action: { appState.showCommandPalette = true }) {
+                Button(action: {
+                    appState.showCommandPalette = true
+                }) {
                     Label("Command Palette", systemImage: "command")
+                }
+                .buttonStyle(.plain)
+                
+                Button(action: {
+                    appState.showSettings = true
+                }) {
+                    Label("Settings", systemImage: "gear")
                 }
                 .buttonStyle(.plain)
             }
             
-            Section("Quick Actions") {
-                NavigationLink {
-                    ModelSettingsView()
-                } label: {
+            Section("Quick Links") {
+                Button(action: {
+                    appState.showSettings = true
+                }) {
                     Label("Model Settings", systemImage: "cpu")
                 }
-                
-                NavigationLink {
-                    SystemStatusView()
-                } label: {
-                    Label("System Status", systemImage: "desktopcomputer")
-                }
+                .buttonStyle(.plain)
             }
         }
         .listStyle(.sidebar)
-        .toolbar {
-            ToolbarItem {
-                Button(action: { appState.showSettings = true }) {
-                    Image(systemName: "gear")
-                }
-            }
-        }
     }
 }

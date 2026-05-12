@@ -12,6 +12,7 @@ struct ModelManagerView: View {
     @State private var modelToDelete: DownloadedModel?
     @State private var errorMessage: String?
     @State private var showError = false
+    @State private var isModelLoaded = false
     
     var body: some View {
         VStack(spacing: 16) {
@@ -26,6 +27,27 @@ struct ModelManagerView: View {
                 .buttonStyle(.bordered)
             }
             .padding(.bottom, 8)
+            
+            // Current model status
+            if let model = appState.currentModel as? LLMModel {
+                HStack {
+                    Image(systemName: isModelLoaded ? "checkmark.circle.fill" : "xmark.circle")
+                        .foregroundColor(isModelLoaded ? .green : .gray)
+                    Text("Current: \(model.displayName)")
+                        .font(.subheadline)
+                    Spacer()
+                    if isModelLoaded {
+                        Button("Unload Model") {
+                            unloadModel()
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(.red)
+                    }
+                }
+                .padding()
+                .background(Color(nsColor: .controlBackgroundColor))
+                .cornerRadius(8)
+            }
             
             // Download section
             DownloadModelSection(
@@ -117,8 +139,9 @@ struct ModelManagerView: View {
                     ForEach(downloadedModels) { model in
                         DownloadedModelRowView(
                             model: model,
-                            isSelected: appState.currentModel.path == model.path,
-                            onSelect: { selectModel(model) },
+                            isLoaded: appState.currentModel.path == model.path && isModelLoaded,
+                            onLoad: { loadModel(model) },
+                            onUnload: { unloadModel() },
                             onDelete: { confirmDelete(model) }
                         )
                     }
@@ -153,6 +176,7 @@ struct ModelManagerView: View {
         }
         .task {
             loadModels()
+            await checkModelLoaded()
         }
     }
     
@@ -168,10 +192,15 @@ struct ModelManagerView: View {
         Task {
             downloadedModels = await LLMEngine.shared.getDownloadedModels()
             isLoading = false
+            await checkModelLoaded()
         }
     }
     
-    private func selectModel(_ model: DownloadedModel) {
+    private func checkModelLoaded() async {
+        isModelLoaded = await LLMEngine.shared.isModelLoaded()
+    }
+    
+    private func loadModel(_ model: DownloadedModel) {
         Task {
             do {
                 let llmModel = LLMModel(
@@ -184,10 +213,18 @@ struct ModelManagerView: View {
                 try await LLMEngine.shared.loadModel(llmModel)
                 appState.currentModel = llmModel
                 appState.saveSettings()
+                isModelLoaded = true
             } catch {
                 errorMessage = error.localizedDescription
                 showError = true
             }
+        }
+    }
+    
+    private func unloadModel() {
+        Task {
+            await LLMEngine.shared.unloadModel()
+            isModelLoaded = false
         }
     }
     
@@ -198,6 +235,11 @@ struct ModelManagerView: View {
     
     private func deleteModel() {
         guard let model = modelToDelete else { return }
+        
+        // Unload if this is the current model
+        if appState.currentModel.path == model.path && isModelLoaded {
+            unloadModel()
+        }
         
         Task {
             do {
@@ -289,8 +331,9 @@ struct DownloadModelSection: View {
 /// Row view for a downloaded model
 struct DownloadedModelRowView: View {
     let model: DownloadedModel
-    let isSelected: Bool
-    let onSelect: () -> Void
+    let isLoaded: Bool
+    let onLoad: () -> Void
+    let onUnload: () -> Void
     let onDelete: () -> Void
     
     @State private var isHovering = false
@@ -311,13 +354,29 @@ struct DownloadedModelRowView: View {
             
             Spacer()
             
-            if isSelected {
-                Label("Active", systemImage: "checkmark.circle.fill")
-                    .font(.caption)
-                    .foregroundColor(.green)
+            if isLoaded {
+                HStack(spacing: 8) {
+                    Label("Loaded", systemImage: "checkmark.circle.fill")
+                        .font(.caption)
+                        .foregroundColor(.green)
+                    
+                    Button(action: onUnload) {
+                        Image(systemName: "stop.circle")
+                            .foregroundColor(.orange)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Unload model")
+                }
+            } else {
+                Button(action: onLoad) {
+                    Label("Load", systemImage: "play.circle")
+                        .font(.caption)
+                }
+                .buttonStyle(.bordered)
+                .tint(.blue)
             }
             
-            if isHovering || isSelected {
+            if isHovering || !isLoaded {
                 Button(action: onDelete) {
                     Image(systemName: "trash")
                         .foregroundColor(.red)
@@ -327,7 +386,6 @@ struct DownloadedModelRowView: View {
         }
         .padding(.vertical, 4)
         .contentShape(Rectangle())
-        .onTapGesture(perform: onSelect)
         .onHover { hovering in
             isHovering = hovering
         }
