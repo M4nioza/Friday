@@ -1,303 +1,214 @@
 import Foundation
-import MLX
 
-/// LLM Engine that handles model loading and inference using Apple MLX
-/// Optimized for Apple Silicon with Metal acceleration
-/// Uses mlx_lm CLI for inference
+/// LLM Engine that handles model loading and inference using the mlx_lm CLI
+/// Simple wrapper around the existing mlx_lm command-line tool
 actor LLMEngine {
     static let shared = LLMEngine()
     
-    private var currentModel: LLMModel?
+    // Model state
+    private var currentModelId: String?
     private var isLoaded: Bool = false
-    private var mlxModelName: String = "mlx-community/Llama-3.2-1B-Instruct-4bit"
     
     // MLX CLI path
-    private let mlxBinary = "/opt/homebrew/opt/mlx-lm/bin/mlx_lm"
-    
-    private init() {
-        print("[LLMEngine] Friday LLM Engine initialized with MLX")
-        print("[LLMEngine] MLX binary: \(mlxBinary)")
+    private var mlxBinary: String {
+        let paths = [
+            "/opt/homebrew/bin/mlx_lm",
+            "/opt/homebrew/opt/mlx-lm/bin/mlx_lm",
+            "/usr/local/bin/mlx_lm"
+        ]
+        for path in paths {
+            if FileManager.default.isExecutableFile(atPath: path) {
+                return path
+            }
+        }
+        return "/opt/homebrew/bin/mlx_lm"
     }
     
-    // MARK: - Type Definitions
-    
-    typealias TokenHandler = (String) async -> Void
-    typealias ProgressHandler = (Double, String) -> Void
+    private init() {
+        print("[LLMEngine] Friday LLM Engine initialized with mlx_lm CLI")
+    }
     
     // MARK: - Model Management
     
-    /// Get list of downloaded models
-    func getAvailableModels() -> [URL] {
-        let cachePath = NSString(string: "~/.cache/mlx-model/models").expandingTildeInPath
-        let cacheURL = URL(fileURLWithPath: cachePath)
-        
-        guard let contents = try? FileManager.default.contentsOfDirectory(
-            at: cacheURL,
-            includingPropertiesForKeys: [.isDirectoryKey],
-            options: [.skipsHiddenFiles]
-        ) else {
-            return []
-        }
-        
-        return contents.filter { url in
-            var isDir: ObjCBool = false
-            return FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir) && isDir.boolValue
-        }
-    }
-    
-    /// Download a model from HuggingFace mlx-community
-    func downloadModel(
-        modelName: String,
-        progressHandler: @escaping (Double, String) -> Void
-    ) async throws -> LLMModel {
-        let modelDirName = modelName.components(separatedBy: "/").last ?? modelName
-        let destinationPath = NSString(string: "~/.cache/mlx-model/models/\(modelDirName)").expandingTildeInPath
-        
-        print("[LLMEngine] Starting download of: \(modelName)")
-        progressHandler(0.1, "Downloading model from HuggingFace...")
-        
-        // Use mlx_lm to download (through the generate command which auto-downloads)
-        let fullModelId = modelName.hasPrefix("mlx-community/") ? modelName : "mlx-community/\(modelName)"
-        
-        // Run mlx_lm generate to trigger download
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/bash")
-        process.arguments = ["-c", "\(mlxBinary) generate --model '\(fullModelId)' --prompt 'test' --max-tokens 1 2>&1 | head -5"]
-        
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = pipe
-        process.standardInput = nil
-        
-        try process.run()
-        process.waitUntilExit()
-        
-        progressHandler(1.0, "Download complete")
-        print("[LLMEngine] Download successful!")
-        
-        return LLMModel(
-            name: modelDirName,
-            displayName: formatModelName(modelDirName),
-            path: destinationPath,
-            contextLength: 4096,
-            description: "Downloaded from HuggingFace mlx-community"
-        )
-    }
-    
-    private func formatModelName(_ name: String) -> String {
-        return name.replacingOccurrences(of: "-", with: " ")
-            .split(separator: " ")
-            .map { $0.prefix(1).uppercased() + $0.dropFirst() }
-            .joined(separator: " ")
-    }
-    
-    /// Delete a downloaded model
-    func deleteModel(at path: String) throws {
-        let expandedPath = NSString(string: path).expandingTildeInPath
-        guard FileManager.default.fileExists(atPath: expandedPath) else {
-            throw LLMEngineError.modelNotFound("Unknown", path)
-        }
-        
-        if let current = currentModel, current.path == expandedPath {
-            throw LLMEngineError.modelInUse
-        }
-        
-        try FileManager.default.removeItem(atPath: expandedPath)
-    }
-    
-    /// Get all downloaded models
+    /// Get list of downloaded models in cache
     func getDownloadedModels() async -> [DownloadedModelInfo] {
-        let available = getAvailableModels()
+        var models: [DownloadedModelInfo] = []
         
-        return available.map { url in
-            let name = url.lastPathComponent
-            let configPath = url.appendingPathComponent("config.json")
-            var contextLength = 4096
-            
-            if let configData = try? Data(contentsOf: configPath),
-               let config = try? JSONSerialization.jsonObject(with: configData) as? [String: Any] {
-                contextLength = config["max_position_embeddings"] as? Int ?? 
-                              config["max_sequence_length"] as? Int ?? 4096
+        // Check mlx-model cache first (primary location for MLX models)
+        let mlxCache = NSString(string: "~/.cache/mlx-model/models").expandingTildeInPath
+        let mlxDir = URL(fileURLWithPath: mlxCache)
+        
+        if let mlxContents = try? FileManager.default.contentsOfDirectory(atPath: mlxDir.path) {
+            for folder in mlxContents {
+                let modelName = (folder as NSString).lastPathComponent
+                let size = folderSize(at: URL(fileURLWithPath: folder))
+                let modelInfo = DownloadedModelInfo(
+                    name: modelName,
+                    path: folder,
+                    contextLength: 4096,
+                    sizeInBytes: size
+                )
+                models.append(modelInfo)
             }
-            
-            var totalSize: Int64 = 0
-            if let enumerator = FileManager.default.enumerator(at: url, includingPropertiesForKeys: [.fileSizeKey]) {
-                for case let fileURL as URL in enumerator {
-                    if let size = try? fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize {
-                        totalSize += Int64(size)
-                    }
-                }
-            }
-            
-            return DownloadedModelInfo(
-                name: name,
-                path: url.path,
-                contextLength: contextLength,
-                sizeInBytes: totalSize
-            )
         }
+        
+        // Also check HuggingFace hub for mlx-community models only
+        let hubDir = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".cache")
+            .appendingPathComponent("huggingface")
+            .appendingPathComponent("hub")
+        
+        if let contents = try? FileManager.default.contentsOfDirectory(atPath: hubDir.path) {
+            for folder in contents {
+                let folderName = (folder as NSString).lastPathComponent
+                guard folderName.hasPrefix("models--") else { continue }
+                let modelName = folderName.replacingOccurrences(of: "models--", with: "").replacingOccurrences(of: "--", with: "/")
+                
+                // Only include mlx-community models
+                guard modelName.contains("mlx-community") else { continue }
+                
+                let size = folderSize(at: URL(fileURLWithPath: folder))
+                let modelInfo = DownloadedModelInfo(
+                    name: modelName,
+                    path: folder,
+                    contextLength: 4096,
+                    sizeInBytes: size
+                )
+                models.append(modelInfo)
+            }
+        }
+        
+        return models
     }
     
-    // MARK: - Model Loading
+    private func folderSize(at url: URL) -> Int64 {
+        let fileManager = FileManager.default
+        var totalSize: Int64 = 0
+        
+        guard let enumerator = fileManager.enumerator(at: url, includingPropertiesForKeys: [.fileSizeKey], options: [.skipsHiddenFiles]) else {
+            return 0
+        }
+        
+        for case let fileURL as URL in enumerator {
+            if let fileSize = try? fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize {
+                totalSize += Int64(fileSize)
+            }
+        }
+        
+        return totalSize
+    }
+    
+    /// Delete a model at the given path
+    func deleteModel(at path: String) async throws {
+        try FileManager.default.removeItem(atPath: path)
+    }
     
     /// Load a model for inference
     func loadModel(_ modelInfo: LLMModel) async throws {
-        let expandedPath = NSString(string: modelInfo.path).expandingTildeInPath
-        
-        // Check if model files exist, if not download
-        if !FileManager.default.fileExists(atPath: expandedPath) {
-            print("[LLMEngine] Model not found at \(expandedPath), downloading...")
-            print("[LLMEngine] Model will be downloaded on first use via mlx_lm")
-        }
-        
-        if isLoaded {
-            unloadModel()
-        }
-        
         print("[LLMEngine] Loading model: \(modelInfo.name)")
-        print("[LLMEngine] Will use HuggingFace model: \(modelInfo.hfModelId)")
         
-        self.currentModel = modelInfo
-        self.mlxModelName = modelInfo.hfModelId
+        let modelId = modelInfo.name.hasPrefix("mlx-community/") ? modelInfo.name : "mlx-community/\(modelInfo.name)"
+        
+        // Verify model exists
+        let models = await getDownloadedModels()
+        let exists = models.contains { $0.name == modelId }
+        
+        if !exists {
+            throw LLMEngineError.modelNotFound(modelInfo.name, "Model not found in cache. Please download it first.")
+        }
+        
+        self.currentModelId = modelId
         self.isLoaded = true
-        
-        print("[LLMEngine] Model ready: \(modelInfo.displayName)")
+        print("[LLMEngine] Model ready: \(modelId)")
     }
     
     /// Unload the current model
     func unloadModel() {
-        currentModel = nil
+        currentModelId = nil
         isLoaded = false
         print("[LLMEngine] Model unloaded")
     }
     
     /// Get current model info
     func getCurrentModel() -> LLMModel? {
-        return currentModel
+        guard let id = currentModelId else { return nil }
+        return LLMModel(
+            name: id,
+            displayName: id.split(separator: "/").last.map(String.init) ?? id,
+            path: id,
+            contextLength: 4096,
+            description: "MLX model"
+        )
     }
     
     /// Check if model is loaded
     func isModelLoaded() -> Bool {
-        return isLoaded
+        return isLoaded && currentModelId != nil
     }
     
-    // MARK: - Inference using MLX
+    // MARK: - Inference
     
+    /// Generate a response
     func generate(
         messages: [ChatMessage],
         temperature: Double = 0.7,
         maxTokens: Int = 2048,
-        onToken: TokenHandler? = nil
+        onToken: ((String) -> Void)? = nil
     ) async throws -> String {
-        let modelName = currentModel?.name ?? "Llama-3.2-1B-Instruct-4bit"
-        print("[LLMEngine] Generating with MLX model: \(modelName)")
+        guard let modelId = currentModelId else {
+            throw LLMEngineError.modelNotLoaded
+        }
         
         // Build prompt from messages
         let prompt = buildPrompt(from: messages)
-        print("[LLMEngine] Prompt length: \(prompt.count) chars")
+        print("[LLMEngine] Generating with model: \(modelId)")
         
-        // Use MLX for inference
-        return try await generateWithMLX(
-            model: "mlx-community/\(modelName)",
-            prompt: prompt,
-            temperature: temperature,
-            maxTokens: maxTokens
-        )
-    }
-    
-    /// Generate using MLX CLI
-    private func generateWithMLX(model: String, prompt: String, temperature: Double, maxTokens: Int) async throws -> String {
-        return try await withCheckedThrowingContinuation { continuation in
-            // Build mlx_lm command - pass prompt directly to avoid escaping issues
-            let cmd = "\(mlxBinary) generate --model '\(model)' --prompt \(generateArg(prompt)) --max-tokens \(maxTokens) --temp \(temperature) 2>&1"
-            
-            print("[LLMEngine] Running MLX command: mlx_lm generate --model \(model)")
-            print("[LLMEngine] Prompt length: \(prompt.count) chars")
-            
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/bin/bash")
-            process.arguments = ["-c", cmd]
-            
-            let outputPipe = Pipe()
-            let errorPipe = Pipe()
-            process.standardOutput = outputPipe
-            process.standardError = errorPipe
-            
-            process.terminationHandler = { proc in
-                let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-                let output = String(data: outputData, encoding: .utf8) ?? ""
-                
-                let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-                let errorStr = String(data: errorData, encoding: .utf8) ?? ""
-                
-                print("[LLMEngine] Process exit status: \(proc.terminationStatus)")
-                print("[LLMEngine] Output length: \(output.count)")
-                
-                if proc.terminationStatus == 0 && !output.isEmpty {
-                    let response = self.parseMLXOutput(output)
-                    print("[LLMEngine] MLX generated \(response.count) chars")
-                    print("[LLMEngine] Response: \(String(response.prefix(200)))...")
-                    continuation.resume(returning: response)
-                } else {
-                    print("[LLMEngine] MLX error: \(errorStr)")
-                    print("[LLMEngine] Raw output: \(output.prefix(500))")
-                    continuation.resume(throwing: LLMEngineError.inferenceFailed(errorStr.isEmpty ? output : errorStr))
-                }
-            }
-            
-            do {
-                try process.run()
-            } catch {
-                print("[LLMEngine] Failed to run MLX: \(error)")
-                continuation.resume(throwing: LLMEngineError.inferenceFailed("Failed to run MLX: \(error)"))
-            }
-        }
-    }
-    
-    /// Generate properly escaped argument for bash
-    private func generateArg(_ input: String) -> String {
-        // Use $'...' syntax for bash to handle special characters
-        let escaped = input
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "'", with: "'\\''")
+        // Create temp file for prompt
+        let tempDir = FileManager.default.temporaryDirectory
+        let promptFile = tempDir.appendingPathComponent("friday_prompt.txt")
         
-        return "$'\(escaped)'"
-    }
-    
-    /// Parse MLX output to extract just the generated response
-    nonisolated private func parseMLXOutput(_ output: String) -> String {
-        // MLX output format:
-        // ==========
-        // Generated text
-        // ==========
-        // Prompt: X tokens, Y tokens-per-sec
-        // Generation: Z tokens, W tokens-per-sec
+        // Write prompt to file
+        try prompt.write(to: promptFile, atomically: true, encoding: .utf8)
         
-        let lines = output.components(separatedBy: "\n")
-        var inResponse = false
-        var responseLines: [String] = []
-        var isFirstLine = true
+        // Run mlx_lm generate
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: mlxBinary)
+        process.arguments = [
+            "generate",
+            "--model", modelId,
+            "--prompt", "@\(promptFile.path)",
+            "--max-tokens", "\(maxTokens)",
+            "--temp", "\(temperature)",
+            "--verbose"
+        ]
         
-        for line in lines {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            
-            if trimmed.hasPrefix("==========") {
-                inResponse = !inResponse
-                isFirstLine = true
-                continue
-            }
-            
-            if inResponse && !trimmed.isEmpty && !trimmed.hasPrefix("Prompt:") && !trimmed.hasPrefix("Generation:") && !trimmed.hasPrefix("Peak memory:") {
-                if isFirstLine {
-                    isFirstLine = false
-                } else {
-                    responseLines.append(line)
-                }
-            }
+        let outputPipe = Pipe()
+        process.standardOutput = outputPipe
+        process.standardError = FileHandle.nullDevice
+        
+        do {
+            try process.run()
+            process.waitUntilExit()
+        } catch {
+            try? FileManager.default.removeItem(at: promptFile)
+            throw LLMEngineError.inferenceFailed(error.localizedDescription)
         }
         
-        let response = responseLines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
-        return response.isEmpty ? output : response
+        // Read output
+        let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+        let output = String(data: outputData, encoding: .utf8) ?? ""
+        
+        // Clean up
+        try? FileManager.default.removeItem(at: promptFile)
+        
+        // Parse response - mlx_lm outputs "Answer: ..." format
+        var response = output
+        if let range = output.range(of: "Answer:") {
+            response = String(output[range.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        
+        print("[LLMEngine] Generated response (\(response.count) chars)")
+        return response
     }
     
     private func buildPrompt(from messages: [ChatMessage]) -> String {
@@ -316,6 +227,43 @@ actor LLMEngine {
         
         prompt += "Assistant:"
         return prompt
+    }
+    
+    /// Download a model from HuggingFace
+    func downloadModel(
+        modelName: String,
+        progressHandler: @escaping (Double, String) -> Void
+    ) async throws -> LLMModel {
+        let cleanName = modelName.replacingOccurrences(of: "mlx-community/", with: "")
+        let displayName = cleanName.replacingOccurrences(of: "-", with: " ").capitalized
+        
+        progressHandler(0.1, "Downloading model...")
+        
+        // Run mlx_lm download
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: mlxBinary)
+        process.arguments = ["download", "--model", modelName]
+        
+        let outputPipe = Pipe()
+        process.standardOutput = outputPipe
+        process.standardError = FileHandle.nullDevice
+        
+        do {
+            try process.run()
+            process.waitUntilExit()
+        } catch {
+            throw LLMEngineError.downloadFailed(error.localizedDescription)
+        }
+        
+        progressHandler(1.0, "Download complete")
+        
+        return LLMModel(
+            name: cleanName,
+            displayName: displayName,
+            path: "huggingface://\(modelName)",
+            contextLength: 4096,
+            description: "MLX model from HuggingFace"
+        )
     }
 }
 
@@ -345,8 +293,8 @@ enum LLMEngineError: LocalizedError {
         switch self {
         case .modelNotLoaded:
             return "No model is currently loaded. Please load a model first."
-        case .modelNotFound(let name, let path):
-            return "Model '\(name)' not found at path: \(path)"
+        case .modelNotFound(let name, let reason):
+            return "Model '\(name)' not found: \(reason)"
         case .modelAlreadyExists(let name):
             return "Model '\(name)' is already downloaded."
         case .modelInUse:

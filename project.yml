@@ -19,11 +19,6 @@ settings:
     ENABLE_HARDENED_RUNTIME: YES
     INFOPLIST_FILE: Friday/Info.plist
 
-packages:
-  MLX:
-    url: https://github.com/ml-explore/mlx-swift
-    from: "0.7.0"
-
 targets:
   Friday:
     type: application
@@ -45,5 +40,3 @@ targets:
       properties:
         com.apple.security.app-sandbox: false
         com.apple.security.automation.apple-events: true
-    dependencies:
-      - package: MLX

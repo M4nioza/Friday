@@ -9,7 +9,6 @@
 /* Begin PBXBuildFile section */
 		355994E56A3DADB26F4910B6 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4980384A323C78E7074210B /* AppState.swift */; };
 		4CACA52CF38EA77F91AA1D66 /* MemoryBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75FF303AA2982369101A2128 /* MemoryBrowserView.swift */; };
-		51A70F87286B76C888B19BF7 /* MLX in Frameworks */ = {isa = PBXBuildFile; productRef = A260B3BF99960CED247ED147 /* MLX */; };
 		697886CFB2A39E063C9092A8 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AEBFC6B09E77DDE002D1091 /* main.swift */; };
 		78F6B8D1E273E197EF6B918C /* TaskPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A323BBE91B0DE01D5A4C2FDE /* TaskPlanner.swift */; };
 		94736A2E569F3F9CC845784C /* ChatManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1CF918004DB53EDFE02CAE /* ChatManager.swift */; };
@@ -45,17 +44,6 @@
 		CAA1BF95B69990847377C69E /* CommandPaletteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandPaletteView.swift; sourceTree = "<group>"; };
 		F4980384A323C78E7074210B /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
-
-/* Begin PBXFrameworksBuildPhase section */
-		69D5E4DDAC320DB9FF727B54 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				51A70F87286B76C888B19BF7 /* MLX in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		1AD2680FEAC920DC6B7E8F09 /* Core */ = {
@@ -138,7 +126,6 @@
 			buildConfigurationList = 1DB4B19F19D791157FCFA6F8 /* Build configuration list for PBXNativeTarget "Friday" */;
 			buildPhases = (
 				2CDA7FB6841E99D73B7B83F5 /* Sources */,
-				69D5E4DDAC320DB9FF727B54 /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -146,7 +133,6 @@
 			);
 			name = Friday;
 			packageProductDependencies = (
-				A260B3BF99960CED247ED147 /* MLX */,
 			);
 			productName = Friday;
 			productReference = 39A3B17108AF73EEF30F26A1 /* Friday.app */;
@@ -176,9 +162,6 @@
 			);
 			mainGroup = 41C81373C327D57B866F7942;
 			minimizedProjectReferenceProxies = 1;
-			packageReferences = (
-				4B048984603BC7F19C4D4B35 /* XCRemoteSwiftPackageReference "mlx-swift" */,
-			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 4A1B4EA29D7631AC0AB91B51 /* Products */;
 			projectDirPath = "";
@@ -396,25 +379,6 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		4B048984603BC7F19C4D4B35 /* XCRemoteSwiftPackageReference "mlx-swift" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/ml-explore/mlx-swift";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 0.7.0;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		A260B3BF99960CED247ED147 /* MLX */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 4B048984603BC7F19C4D4B35 /* XCRemoteSwiftPackageReference "mlx-swift" */;
-			productName = MLX;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 5D81125920C87ABC678B7C36 /* Project object */;
 }
