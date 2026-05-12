@@ -4,16 +4,19 @@ import SwiftUI
 struct ModelManagerView: View {
     @EnvironmentObject var appState: AppState
     @State private var downloadedModels: [DownloadedModel] = []
+    @State private var availableModels: [HuggingFaceModel] = []
     @State private var isLoading = true
-    @State private var showDownloadSheet = false
-    @State private var downloadURL = ""
+    @State private var isLoadingOnline = false
+    @State private var showError = false
+    @State private var errorMessage = ""
     @State private var isDownloading = false
     @State private var downloadProgress: Double = 0
     @State private var downloadStatus = ""
     @State private var showDeleteConfirmation = false
     @State private var modelToDelete: DownloadedModel?
-    @State private var errorMessage: String?
-    @State private var showError = false
+    @State private var searchText = ""
+    @State private var selectedCategory: HuggingFaceModel.ModelCategory?
+    @State private var showOnlineModels = false
     
     var body: some View {
         VStack(spacing: 16) {
@@ -21,12 +24,13 @@ struct ModelManagerView: View {
             HStack {
                 Text("Model Manager")
                     .font(.headline)
+                
                 Spacer()
-                Button(action: { showDownloadSheet = true }) {
-                    Label("Download", systemImage: "arrow.down.circle")
+                
+                Button(action: { showOnlineModels = true }) {
+                    Label("Browse Online", systemImage: "globe")
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(isDownloading)
                 
                 Button(action: loadModels) {
                     Label("Refresh", systemImage: "arrow.clockwise")
@@ -35,22 +39,16 @@ struct ModelManagerView: View {
             }
             .padding(.bottom, 8)
             
-            // Error banner
-            if showError, let error = errorMessage {
-                HStack {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.orange)
-                    Text(error)
-                        .font(.caption)
-                    Spacer()
-                    Button(action: { showError = false }) {
-                        Image(systemName: "xmark")
-                    }
-                }
-                .padding(8)
-                .background(Color.orange.opacity(0.1))
-                .cornerRadius(8)
+            // System memory info
+            HStack {
+                Image(systemName: "memorychip")
+                    .foregroundColor(.secondary)
+                Text("Available Memory: \(formatMemory(availableMemory))")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Spacer()
             }
+            .padding(.bottom, 8)
             
             // Download progress
             if isDownloading {
@@ -93,13 +91,12 @@ struct ModelManagerView: View {
                     Text("No Models Downloaded")
                         .font(.headline)
                     
-                    Text("Download a model from HuggingFace to get started")
+                    Text("Browse online models to download one")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
                     
-                    Button("Download Model") {
-                        showDownloadSheet = true
+                    Button("Browse Models") {
+                        showOnlineModels = true
                     }
                     .buttonStyle(.borderedProminent)
                 }
@@ -107,7 +104,7 @@ struct ModelManagerView: View {
             } else {
                 List {
                     ForEach(downloadedModels) { model in
-                        ModelRowView(
+                        DownloadedModelRowView(
                             model: model,
                             isSelected: appState.currentModel.path == model.path,
                             onSelect: { selectModel(model) },
@@ -133,12 +130,15 @@ struct ModelManagerView: View {
             .padding(.top, 8)
         }
         .padding()
-        .sheet(isPresented: $showDownloadSheet) {
-            DownloadModelSheet(
-                url: $downloadURL,
-                isDownloading: $isDownloading,
-                onDownload: startDownload,
-                onCancel: { showDownloadSheet = false }
+        .sheet(isPresented: $showOnlineModels) {
+            OnlineModelsSheet(
+                models: availableModels,
+                isLoading: isLoadingOnline,
+                searchText: $searchText,
+                selectedCategory: $selectedCategory,
+                onDownload: downloadModel,
+                onRefresh: loadOnlineModels,
+                onClose: { showOnlineModels = false }
             )
         }
         .alert("Delete Model?", isPresented: $showDeleteConfirmation) {
@@ -152,8 +152,12 @@ struct ModelManagerView: View {
             }
         }
         .task {
-            loadModels()
+            await loadAll()
         }
+    }
+    
+    private var availableMemory: UInt64 {
+        Foundation.ProcessInfo.processInfo.physicalMemory
     }
     
     private var totalStorageUsed: String {
@@ -163,12 +167,30 @@ struct ModelManagerView: View {
         return formatter.string(fromByteCount: total)
     }
     
+    private func loadAll() async {
+        isLoading = true
+        downloadedModels = await LLMEngine.shared.getDownloadedModels()
+        isLoading = false
+        await loadOnlineModels()
+    }
+    
     private func loadModels() {
         isLoading = true
         Task {
             downloadedModels = await LLMEngine.shared.getDownloadedModels()
             isLoading = false
         }
+    }
+    
+    private func loadOnlineModels() async {
+        isLoadingOnline = true
+        do {
+            availableModels = try await LLMEngine.shared.fetchAvailableModels()
+        } catch {
+            errorMessage = error.localizedDescription
+            showError = true
+        }
+        isLoadingOnline = false
     }
     
     private func selectModel(_ model: DownloadedModel) {
@@ -211,19 +233,13 @@ struct ModelManagerView: View {
         }
     }
     
-    private func startDownload() {
-        guard let url = URL(string: downloadURL), !downloadURL.isEmpty else {
-            errorMessage = "Please enter a valid HuggingFace URL"
-            showError = true
-            return
-        }
-        
+    private func downloadModel(_ hfModel: HuggingFaceModel) {
         isDownloading = true
-        showDownloadSheet = false
+        showOnlineModels = false
         
         Task {
             do {
-                let model = try await LLMEngine.shared.downloadModel(from: url) { progress, status in
+                let model = try await LLMEngine.shared.downloadModel(modelId: hfModel.id) { progress, status in
                     Task { @MainActor in
                         downloadProgress = progress
                         downloadStatus = status
@@ -244,10 +260,16 @@ struct ModelManagerView: View {
             }
         }
     }
+    
+    private func formatMemory(_ bytes: UInt64) -> String {
+        let formatter = ByteCountFormatter()
+        formatter.countStyle = .memory
+        return formatter.string(fromByteCount: Int64(bytes))
+    }
 }
 
 /// Row view for a downloaded model
-struct ModelRowView: View {
+struct DownloadedModelRowView: View {
     let model: DownloadedModel
     let isSelected: Bool
     let onSelect: () -> Void
@@ -262,7 +284,7 @@ struct ModelRowView: View {
                     .font(.headline)
                 
                 HStack(spacing: 12) {
-                    Label("\(model.contextLength)k ctx", systemImage: "text.alignleft")
+                    Label("\(model.contextLength / 1024)k ctx", systemImage: "text.alignleft")
                     Label(model.formattedSize, systemImage: "doc")
                 }
                 .font(.caption)
@@ -294,68 +316,200 @@ struct ModelRowView: View {
     }
 }
 
-/// Sheet for downloading a new model
-struct DownloadModelSheet: View {
-    @Binding var url: String
-    @Binding var isDownloading: Bool
-    let onDownload: () -> Void
-    let onCancel: () -> Void
+/// Sheet for browsing and downloading online models
+struct OnlineModelsSheet: View {
+    let models: [HuggingFaceModel]
+    let isLoading: Bool
+    @Binding var searchText: String
+    @Binding var selectedCategory: HuggingFaceModel.ModelCategory?
+    let onDownload: (HuggingFaceModel) -> Void
+    let onRefresh: () async -> Void
+    let onClose: () -> Void
     
-    var body: some View {
-        VStack(spacing: 20) {
-            // Header
-            HStack {
-                Text("Download Model")
-                    .font(.headline)
-                Spacer()
-                Button(action: onCancel) {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.secondary)
-                }
-            }
-            
-            // Instructions
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Enter a HuggingFace mlx-community URL")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Label("Text instruct models (Llama, Mistral, Phi, Qwen, Gemma...)", systemImage: "doc.text")
-                    Label("Vision instruct models (for image understanding)", systemImage: "photo")
-                    Label("Any MLX-compatible model from HuggingFace", systemImage: "cpu")
-                }
-                .font(.caption)
-                .foregroundColor(.secondary)
-            }
-            .padding()
-            .background(Color(nsColor: .controlBackgroundColor))
-            .cornerRadius(8)
-            
-            // URL Input
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Model URL")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                
-                TextField("https://huggingface.co/mlx-community/...", text: $url)
-                    .textFieldStyle(.roundedBorder)
-                
-                Text("Use mlx-community variants for Apple Silicon optimization")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            
-            // Download button
-            HStack {
-                Spacer()
-                Button("Cancel", action: onCancel)
-                Button("Download", action: onDownload)
-                    .buttonStyle(.borderedProminent)
-                    .disabled(url.isEmpty || isDownloading)
+    var filteredModels: [HuggingFaceModel] {
+        var result = models
+        
+        if let category = selectedCategory {
+            result = result.filter { $0.category == category }
+        }
+        
+        if !searchText.isEmpty {
+            let query = searchText.lowercased()
+            result = result.filter {
+                $0.name.lowercased().contains(query) ||
+                $0.id.lowercased().contains(query)
             }
         }
+        
+        return result
+    }
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                Text("Browse Models")
+                    .font(.headline)
+                Spacer()
+                Button(action: {
+                    Task { await onRefresh() }
+                }) {
+                    Label("Refresh", systemImage: "arrow.clockwise")
+                }
+                .buttonStyle(.bordered)
+                .disabled(isLoading)
+                
+                Button(action: onClose) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.secondary)
+                        .font(.title2)
+                }
+            }
+            .padding()
+            
+            // Search and filter
+            VStack(spacing: 12) {
+                TextField("Search models...", text: $searchText)
+                    .textFieldStyle(.roundedBorder)
+                
+                // Category filter
+                HStack {
+                    FilterButton(
+                        title: "All",
+                        isSelected: selectedCategory == nil,
+                        action: { selectedCategory = nil }
+                    )
+                    
+                    FilterButton(
+                        title: "Vision",
+                        isSelected: selectedCategory == .vision,
+                        action: { selectedCategory = .vision }
+                    )
+                    
+                    FilterButton(
+                        title: "Instruct",
+                        isSelected: selectedCategory == .instruct,
+                        action: { selectedCategory = .instruct }
+                    )
+                    
+                    FilterButton(
+                        title: "Text",
+                        isSelected: selectedCategory == .text,
+                        action: { selectedCategory = .text }
+                    )
+                    
+                    Spacer()
+                }
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 12)
+            
+            Divider()
+            
+            // Model list
+            if isLoading {
+                HStack {
+                    ProgressView()
+                    Text("Loading models from HuggingFace...")
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if filteredModels.isEmpty {
+                VStack {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 48))
+                        .foregroundColor(.secondary)
+                    Text("No models found")
+                        .font(.headline)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 8) {
+                        ForEach(filteredModels) { model in
+                            OnlineModelRowView(model: model, onDownload: onDownload)
+                        }
+                    }
+                    .padding()
+                }
+            }
+        }
+        .frame(width: 600, height: 500)
+    }
+}
+
+/// Filter button
+struct FilterButton: View {
+    let title: String
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.caption)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(isSelected ? Color.blue : Color.gray.opacity(0.2))
+                .foregroundColor(isSelected ? .white : .primary)
+                .cornerRadius(16)
+        }
+        .buttonStyle(.plain)
+        .task {
+            // No-op to make it compatible
+        }
+    }
+}
+
+/// Row view for an online model
+struct OnlineModelRowView: View {
+    let model: HuggingFaceModel
+    let onDownload: (HuggingFaceModel) -> Void
+    
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Image(systemName: model.category.icon)
+                        .foregroundColor(.blue)
+                        .font(.caption)
+                    
+                    Text(model.name)
+                        .font(.headline)
+                        .lineLimit(1)
+                    
+                    Text(model.category.rawValue)
+                        .font(.caption2)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.gray.opacity(0.2))
+                        .cornerRadius(4)
+                }
+                
+                Text(model.id)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                
+                HStack(spacing: 16) {
+                    Label(model.formattedDownloads, systemImage: "arrow.down.circle")
+                    Label(model.formattedSize, systemImage: "doc")
+                }
+                .font(.caption2)
+                .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+            
+            Button(action: { onDownload(model) }) {
+                Image(systemName: "arrow.down.circle.fill")
+                    .font(.title2)
+                    .foregroundColor(.blue)
+            }
+            .buttonStyle(.plain)
+        }
         .padding()
-        .frame(width: 450, height: 300)
+        .background(Color(nsColor: .controlBackgroundColor))
+        .cornerRadius(8)
     }
 }
