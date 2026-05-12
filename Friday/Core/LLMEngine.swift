@@ -226,8 +226,21 @@ actor LLMEngine {
         return response
     }
     
-    /// Build prompt using Llama 3 chat format
+    /// Build prompt based on current model type
     private func buildChatPrompt(from messages: [ChatMessage]) -> String {
+        let modelId = (currentModelId ?? "").lowercased()
+        
+        if modelId.contains("mistral") || modelId.contains("mixtral") {
+            return buildMistralPrompt(from: messages)
+        } else if modelId.contains("qwen") {
+            return buildQwenPrompt(from: messages)
+        } else {
+            // Default to Llama 3 format
+            return buildLlama3Prompt(from: messages)
+        }
+    }
+    
+    private func buildLlama3Prompt(from messages: [ChatMessage]) -> String {
         var prompt = "<|begin_of_text|>"
         
         for message in messages {
@@ -242,6 +255,43 @@ actor LLMEngine {
         }
         
         prompt += "<|start_header_id|>assistant<|end_header_id|>\n\n"
+        return prompt
+    }
+
+    private func buildMistralPrompt(from messages: [ChatMessage]) -> String {
+        var prompt = "<s>"
+        var pendingSystem = ""
+        
+        for message in messages {
+            switch message.role {
+            case .system:
+                pendingSystem = message.content + "\n\n"
+            case .user:
+                prompt += "[INST] \(pendingSystem)\(message.content) [/INST]"
+                pendingSystem = "" // System prompt only prepended to the first user message
+            case .assistant:
+                prompt += "\(message.content)</s> "
+            }
+        }
+        
+        return prompt
+    }
+
+    private func buildQwenPrompt(from messages: [ChatMessage]) -> String {
+        var prompt = ""
+        
+        for message in messages {
+            switch message.role {
+            case .system:
+                prompt += "<|im_start|>system\n\(message.content)<|im_end|>\n"
+            case .user:
+                prompt += "<|im_start|>user\n\(message.content)<|im_end|>\n"
+            case .assistant:
+                prompt += "<|im_start|>assistant\n\(message.content)<|im_end|>\n"
+            }
+        }
+        
+        prompt += "<|im_start|>assistant\n"
         return prompt
     }
     
