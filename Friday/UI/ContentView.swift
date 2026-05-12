@@ -49,6 +49,13 @@ struct ContentView: View {
         .task {
             await checkModelStatus()
         }
+        .task {
+            // Periodically update model status every 2 seconds
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                await checkModelStatus()
+            }
+        }
     }
     
     private func checkModelStatus() async {
