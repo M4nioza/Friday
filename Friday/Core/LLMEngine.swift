@@ -13,6 +13,7 @@ actor LLMEngine {
     
     // Streaming callback type
     typealias TokenHandler = (String) async -> Void
+    typealias ProgressHandler = (Double, String) -> Void
     
     private init() {}
     
@@ -48,48 +49,33 @@ actor LLMEngine {
         // Create the model directory name (just the model name without prefix)
         let modelDirName = modelName.components(separatedBy: "/").last ?? modelName
         let destinationPath = NSString(string: "~/.cache/mlx-model/models/\(modelDirName)").expandingTildeInPath
-        let destinationURL = URL(fileURLWithPath: destinationPath)
+        
+        print("[LLMEngine] Starting download of: \(fullModelId)")
+        print("[LLMEngine] Destination: \(destinationPath)")
         
         // Check if already downloaded
         if FileManager.default.fileExists(atPath: destinationPath) {
+            print("[LLMEngine] Model already exists at destination")
             throw LLMError.modelAlreadyExists(modelDirName)
         }
         
         // Create cache directory if needed
         let cachePath = NSString(string: "~/.cache/mlx-model/models").expandingTildeInPath
+        print("[LLMEngine] Creating cache directory: \(cachePath)")
         try FileManager.default.createDirectory(atPath: cachePath, withIntermediateDirectories: true)
         
-        progressHandler(0, "Connecting to HuggingFace...")
+        // Download files directly using HuggingFace API
+        progressHandler(0.05, "Getting file list...")
+        print("[LLMEngine] Downloading files directly from HuggingFace API...")
         
-        // Use git clone to download the full model repository
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
-        process.arguments = ["clone", "--depth", "1", "\(hfBaseURL)/\(fullModelId)", destinationPath]
-        
-        let outputPipe = Pipe()
-        let errorPipe = Pipe()
-        process.standardOutput = outputPipe
-        process.standardError = errorPipe
-        
-        try process.run()
-        process.waitUntilExit()
-        
-        let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-        let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-        let output = String(data: outputData, encoding: .utf8) ?? ""
-        let errorOutput = String(data: errorData, encoding: .utf8) ?? ""
-        
-        if process.terminationStatus != 0 {
-            // Clean up partial download
-            try? FileManager.default.removeItem(atPath: destinationPath)
-            
-            if errorOutput.contains("Repository not found") || errorOutput.contains("404") {
-                throw LLMError.downloadFailed("Model not found: \(fullModelId). Check the model name.")
-            }
-            throw LLMError.downloadFailed("Download failed: \(errorOutput.prefix(200))")
-        }
+        try await downloadFilesDirectly(
+            modelId: fullModelId,
+            destination: destinationPath,
+            progressHandler: progressHandler
+        )
         
         progressHandler(1.0, "Download complete")
+        print("[LLMEngine] Download successful!")
         
         // Create model entry
         return LLMModel(
@@ -99,6 +85,132 @@ actor LLMEngine {
             contextLength: 4096,
             description: "Downloaded from HuggingFace"
         )
+    }
+    
+    /// Download files directly from HuggingFace API
+    private func downloadFilesDirectly(
+        modelId: String,
+        destination: String,
+        progressHandler: @escaping ProgressHandler
+    ) async throws {
+        print("[LLMEngine] Direct download from: \(hfBaseURL)/\(modelId)")
+        
+        // Get list of files from the repo
+        let apiURL = URL(string: "https://huggingface.co/api/models/\(modelId)/tree/main")!
+        
+        var request = URLRequest(url: apiURL)
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        
+        progressHandler(0.05, "Getting file list...")
+        print("[LLMEngine] Fetching file list from API...")
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            print("[LLMEngine] Failed to get file list, status: \((response as? HTTPURLResponse)?.statusCode ?? -1)")
+            throw LLMError.downloadFailed("Failed to get file list from repository")
+        }
+        
+        struct HFFile: Codable {
+            let path: String
+            let size: Int64?
+            let type: String?
+        }
+        
+        let files = try JSONDecoder().decode([HFFile].self, from: data)
+        
+        // Filter for actual model files (not directories)
+        let modelFiles = files.filter { file in
+            file.type == "file" && (
+                file.path.hasSuffix(".safetensors") ||
+                file.path.hasSuffix(".bin") ||
+                file.path.hasSuffix(".json") ||
+                file.path.hasSuffix(".md") ||
+                file.path.hasSuffix(".txt") ||
+                file.path.hasSuffix(".py") ||
+                file.path.hasSuffix(".model") ||
+                file.path.contains("config")
+            )
+        }
+        
+        print("[LLMEngine] Found \(modelFiles.count) files to download")
+        
+        let totalSize = modelFiles.reduce(0) { $0 + ($1.size ?? 0) }
+        print("[LLMEngine] Total size: \(ByteCountFormatter.string(fromByteCount: totalSize, countStyle: .file))")
+        
+        var downloadedSize: Int64 = 0
+        var failedFiles: [String] = []
+        
+        for (index, file) in modelFiles.enumerated() {
+            let baseProgress = 0.1
+            let endProgress = 0.95
+            let progressRange = endProgress - baseProgress
+            let progress = baseProgress + (progressRange * Double(index) / Double(modelFiles.count))
+            progressHandler(progress, "Downloading \(file.path)...")
+            
+            let fileURL = URL(string: "\(hfBaseURL)/\(modelId)/resolve/main/\(file.path)")!
+            let localPath = (destination as NSString).appendingPathComponent(file.path)
+            
+            print("[LLMEngine] Downloading [\(index + 1)/\(modelFiles.count)]: \(file.path)")
+            
+            do {
+                // Create directory if needed
+                let dirPath = (localPath as NSString).deletingLastPathComponent
+                try FileManager.default.createDirectory(atPath: dirPath, withIntermediateDirectories: true)
+                
+                // Download file
+                let (tempURL, response) = try await URLSession.shared.download(from: fileURL)
+                
+                if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
+                    // Check if it's an LFS pointer (small file starting with version https://git-lfs.github.com)
+                    let fileAttributes = try FileManager.default.attributesOfItem(atPath: tempURL.path)
+                    let tempSize = fileAttributes[.size] as? Int64 ?? 0
+                    
+                    if tempSize < 100 && tempSize > 0 {
+                        // Likely an LFS pointer, try without redirect
+                        print("[LLMEngine] File is LFS pointer (\(tempSize) bytes), skipping")
+                        try? FileManager.default.removeItem(at: tempURL)
+                        downloadedSize += file.size ?? 0
+                        continue
+                    }
+                    
+                    try FileManager.default.moveItem(at: tempURL, to: URL(fileURLWithPath: localPath))
+                    
+                    if let size = file.size {
+                        downloadedSize += size
+                    }
+                    
+                    print("[LLMEngine] Downloaded: \(file.path) (\(ByteCountFormatter.string(fromByteCount: downloadedSize, countStyle: .file))/\(ByteCountFormatter.string(fromByteCount: totalSize, countStyle: .file)))")
+                } else {
+                    print("[LLMEngine] Failed to download \(file.path): HTTP \((response as? HTTPURLResponse)?.statusCode ?? -1)")
+                    failedFiles.append(file.path)
+                }
+            } catch {
+                print("[LLMEngine] Error downloading \(file.path): \(error.localizedDescription)")
+                failedFiles.append(file.path)
+            }
+        }
+        
+        progressHandler(0.98, "Finalizing...")
+        
+        // Verify download
+        var actualSize: Int64 = 0
+        if let enumerator = FileManager.default.enumerator(atPath: destination) {
+            while let file = enumerator.nextObject() as? String {
+                let fullPath = (destination as NSString).appendingPathComponent(file)
+                if let attrs = try? FileManager.default.attributesOfItem(atPath: fullPath),
+                   let size = attrs[.size] as? Int64 {
+                    actualSize += size
+                }
+            }
+        }
+        
+        print("[LLMEngine] Direct download complete: \(actualSize) bytes (\(ByteCountFormatter.string(fromByteCount: actualSize, countStyle: .file)))")
+        
+        if failedFiles.count > 0 {
+            print("[LLMEngine] Failed to download \(failedFiles.count) files")
+        }
     }
     
     private func formatModelName(_ name: String) -> String {
