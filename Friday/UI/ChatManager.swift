@@ -50,16 +50,23 @@ final class ChatManager: ObservableObject {
         
         print("[ChatManager] User message: \(content)")
         
-        // Check if model is loaded
-        let modelLoaded = await LLMEngine.shared.isModelLoaded()
-        let currentModel = await LLMEngine.shared.getCurrentModel()
-        print("[ChatManager] Model status - Loaded: \(modelLoaded), Model: \(currentModel?.displayName ?? "None")")
-        
         // Add user message
         let userMessage = ChatMessage(role: .user, content: content)
         messages.append(userMessage)
         
         do {
+            // Check if model is loaded, if not load default
+            var modelLoaded = await LLMEngine.shared.isModelLoaded()
+            if !modelLoaded {
+                print("[ChatManager] No model loaded, loading default model...")
+                let defaultModel = AppState.shared.currentModel
+                try await LLMEngine.shared.loadModel(defaultModel)
+                modelLoaded = true
+            }
+            
+            let currentModel = await LLMEngine.shared.getCurrentModel()
+            print("[ChatManager] Model status - Loaded: \(modelLoaded), Model: \(currentModel?.displayName ?? "Unknown")")
+            
             // Build context
             print("[ChatManager] Building context...")
             let context = await ContextManager.shared.buildContext(

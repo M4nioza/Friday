@@ -205,26 +205,11 @@ actor LLMEngine {
     /// Generate using MLX CLI
     private func generateWithMLX(model: String, prompt: String, temperature: Double, maxTokens: Int) async throws -> String {
         return try await withCheckedThrowingContinuation { continuation in
-            // Create temp file for prompt
-            let tempDir = FileManager.default.temporaryDirectory
-            let promptFile = tempDir.appendingPathComponent("friday_prompt_\(UUID().uuidString).txt")
+            // Build mlx_lm command - pass prompt directly to avoid escaping issues
+            let cmd = "\(mlxBinary) generate --model '\(model)' --prompt \(generateArg(prompt)) --max-tokens \(maxTokens) --temp \(temperature) 2>&1"
             
-            do {
-                try prompt.write(to: promptFile, atomically: true, encoding: .utf8)
-            } catch {
-                continuation.resume(throwing: LLMEngineError.inferenceFailed("Failed to write prompt: \(error)"))
-                return
-            }
-            
-            // Build mlx_lm command
-            let escapedPrompt = prompt
-                .replacingOccurrences(of: "'", with: "'\\''")
-                .replacingOccurrences(of: "\n", with: "\\n")
-            
-            let mlxPath = mlxBinary.replacingOccurrences(of: " ", with: "\\ ")
-            let cmd = "\(mlxPath) generate --model '\(model)' --prompt '\(escapedPrompt)' --max-tokens \(maxTokens) --temp \(temperature) 2>&1"
-            
-            print("[LLMEngine] Running MLX command...")
+            print("[LLMEngine] Running MLX command: mlx_lm generate --model \(model)")
+            print("[LLMEngine] Prompt length: \(prompt.count) chars")
             
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/bin/bash")
@@ -236,32 +221,44 @@ actor LLMEngine {
             process.standardError = errorPipe
             
             process.terminationHandler = { proc in
-                // Clean up temp file
-                try? FileManager.default.removeItem(at: promptFile)
-                
                 let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
                 let output = String(data: outputData, encoding: .utf8) ?? ""
                 
-                if proc.terminationStatus == 0 {
-                    // Parse output - extract the generated text
+                let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+                let errorStr = String(data: errorData, encoding: .utf8) ?? ""
+                
+                print("[LLMEngine] Process exit status: \(proc.terminationStatus)")
+                print("[LLMEngine] Output length: \(output.count)")
+                
+                if proc.terminationStatus == 0 && !output.isEmpty {
                     let response = self.parseMLXOutput(output)
                     print("[LLMEngine] MLX generated \(response.count) chars")
+                    print("[LLMEngine] Response: \(String(response.prefix(200)))...")
                     continuation.resume(returning: response)
                 } else {
-                    let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-                    let errorStr = String(data: errorData, encoding: .utf8) ?? ""
                     print("[LLMEngine] MLX error: \(errorStr)")
-                    continuation.resume(throwing: LLMEngineError.inferenceFailed(errorStr))
+                    print("[LLMEngine] Raw output: \(output.prefix(500))")
+                    continuation.resume(throwing: LLMEngineError.inferenceFailed(errorStr.isEmpty ? output : errorStr))
                 }
             }
             
             do {
                 try process.run()
             } catch {
-                try? FileManager.default.removeItem(at: promptFile)
+                print("[LLMEngine] Failed to run MLX: \(error)")
                 continuation.resume(throwing: LLMEngineError.inferenceFailed("Failed to run MLX: \(error)"))
             }
         }
+    }
+    
+    /// Generate properly escaped argument for bash
+    private func generateArg(_ input: String) -> String {
+        // Use $'...' syntax for bash to handle special characters
+        let escaped = input
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "'", with: "'\\''")
+        
+        return "$'\(escaped)'"
     }
     
     /// Parse MLX output to extract just the generated response

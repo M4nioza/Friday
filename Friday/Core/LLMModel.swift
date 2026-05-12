@@ -10,6 +10,11 @@ struct LLMModel: Identifiable, Hashable {
     let description: String
     let recommendedFor: [String]
     
+    // HuggingFace model ID for MLX
+    var hfModelId: String {
+        return "mlx-community/\(name)"
+    }
+    
     init(
         id: UUID = UUID(),
         name: String,
@@ -28,48 +33,42 @@ struct LLMModel: Identifiable, Hashable {
         self.recommendedFor = recommendedFor
     }
     
+    // Default model - Llama 3.2 1B (tested working with MLX)
     static let defaultModel = LLMModel(
-        name: "llama3.2-3b",
-        displayName: "Llama 3.2 3B",
-        path: "~/.cache/mlx-model/models/llama3.2-3b",
+        name: "Llama-3.2-1B-Instruct-4bit",
+        displayName: "Llama 3.2 1B Instruct",
+        path: "~/.cache/mlx-model/models/Llama-3.2-1B-Instruct-4bit",
         contextLength: 4096,
-        description: "Fast and efficient model for general tasks",
-        recommendedFor: ["general", "coding", "reasoning"]
+        description: "Fast and efficient model for general tasks (tested with MLX)",
+        recommendedFor: ["general", "coding", "reasoning", "fast"]
     )
     
+    // Available models compatible with MLX
     static let allModels: [LLMModel] = [
         defaultModel,
         LLMModel(
-            name: "llama3.2-1b",
-            displayName: "Llama 3.2 1B",
-            path: "~/.cache/mlx-model/models/llama3.2-1b",
+            name: "Llama-3.2-3B-Instruct-4bit",
+            displayName: "Llama 3.2 3B Instruct",
+            path: "~/.cache/mlx-model/models/Llama-3.2-3B-Instruct-4bit",
             contextLength: 4096,
-            description: "Ultra-fast model for simple tasks",
-            recommendedFor: ["simple", "fast"]
+            description: "Balanced model with more capacity",
+            recommendedFor: ["complex", "reasoning"]
         ),
         LLMModel(
-            name: "llama3.1-8b",
-            displayName: "Llama 3.1 8B",
-            path: "~/.cache/mlx-model/models/llama3.1-8b",
-            contextLength: 8192,
-            description: "Balanced model with longer context",
-            recommendedFor: ["complex", "long-context"]
-        ),
-        LLMModel(
-            name: "mistral-7b",
-            displayName: "Mistral 7B",
-            path: "~/.cache/mlx-model/models/mistral-7b",
+            name: "Mistral-7B-Instruct-4bit",
+            displayName: "Mistral 7B Instruct",
+            path: "~/.cache/mlx-model/models/Mistral-7B-Instruct-4bit",
             contextLength: 8192,
             description: "Strong reasoning capabilities",
             recommendedFor: ["reasoning", "analysis"]
         ),
         LLMModel(
-            name: "phi-3.5-mini",
-            displayName: "Phi-3.5 Mini",
-            path: "~/.cache/mlx-model/models/phi-3.5-mini",
-            contextLength: 4096,
-            description: "Compact model with good quality",
-            recommendedFor: ["fast", "efficient"]
+            name: "Qwen2.5-1.5B-Instruct-4bit",
+            displayName: "Qwen 2.5 1.5B",
+            path: "~/.cache/mlx-model/models/Qwen2.5-1.5B-Instruct-4bit",
+            contextLength: 8192,
+            description: "Fast and lightweight",
+            recommendedFor: ["fast", "simple"]
         )
     ]
 }
