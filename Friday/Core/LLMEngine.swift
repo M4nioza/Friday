@@ -8,116 +8,13 @@ actor LLMEngine {
     private var isLoaded: Bool = false
     private var modelProcess: Process?
     
-    // HuggingFace API base URL
-    private let hfAPIURL = "https://huggingface.co/api"
+    // HuggingFace base URL
+    private let hfBaseURL = "https://huggingface.co"
     
     // Streaming callback type
     typealias TokenHandler = (String) async -> Void
     
     private init() {}
-    
-    // MARK: - Model Discovery
-    
-    /// Fetch available MLX models from HuggingFace
-    func fetchAvailableModels() async throws -> [HuggingFaceModel] {
-        // Query HuggingFace API for mlx-community models
-        let url = URL(string: "\(hfAPIURL)/models?filter=mlx&sort=downloads&direction=-1&limit=100")!
-        
-        var request = URLRequest(url: url)
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200...299).contains(httpResponse.statusCode) else {
-            throw LLMError.downloadFailed("Failed to fetch models from HuggingFace")
-        }
-        
-        let decoder = JSONDecoder()
-        let rawModels = try decoder.decode([HFModelInfo].self, from: data)
-        
-        // Get available memory
-        let availableMemory = Foundation.ProcessInfo.processInfo.physicalMemory
-        
-        // Filter and transform models
-        let models = rawModels.compactMap { info -> HuggingFaceModel? in
-            // Skip if no downloads (probably not real models)
-            guard info.downloads > 0 else { return nil }
-            
-            // Calculate estimated size (in bytes)
-            let estimatedSize = estimateModelSize(info)
-            
-            // Skip models that are too large (> 70% of available memory)
-            guard estimatedSize < Int64(Double(availableMemory) * 0.7) else { return nil }
-            
-            let isVision = info.pipeline_tag == "vision-text-to-image" || 
-                          info.config?.vision_enabled == true ||
-                          (info.tags?.contains("vision") ?? false) ||
-                          (info.id?.contains("vision") ?? false)
-            
-            let isInstruct = info.pipeline_tag == "text-generation" ||
-                            (info.tags?.contains("instruct") ?? false) ||
-                            (info.id?.contains("instruct") ?? false)
-            
-            // Include text generation and vision models
-            let category: HuggingFaceModel.ModelCategory
-            if isVision {
-                category = .vision
-            } else if isInstruct {
-                category = .instruct
-            } else {
-                // Include others but mark as general
-                category = .text
-            }
-            
-            guard let modelId = info.id else { return nil }
-            
-            return HuggingFaceModel(
-                id: modelId,
-                name: formatModelName(modelId),
-                downloads: info.downloads,
-                size: estimatedSize,
-                category: category,
-                tags: info.tags ?? [],
-                lastModified: info.lastModified ?? ""
-            )
-        }
-        
-        // Sort by downloads
-        return models.sorted { $0.downloads > $1.downloads }
-    }
-    
-    private func formatModelName(_ id: String?) -> String {
-        guard let id = id else { return "Unknown Model" }
-        // Convert "mlx-community/llama-3.2-1b-instruct" to "Llama 3.2 1B Instruct"
-        let cleanId = id.replacingOccurrences(of: "mlx-community/", with: "")
-            .replacingOccurrences(of: "-", with: " ")
-            .replacingOccurrences(of: "_", with: " ")
-        
-        return cleanId.split(separator: " ")
-            .map { $0.prefix(1).uppercased() + $0.dropFirst() }
-            .joined(separator: " ")
-    }
-    
-    private func estimateModelSize(_ info: HFModelInfo) -> Int64 {
-        // Try to get size from safetensors if available
-        if let siblings = info.siblings {
-            let totalSize = siblings.compactMap { $0.size }.reduce(0, +)
-            if totalSize > 0 {
-                return totalSize
-            }
-        }
-        
-        // Estimate based on parameter count (rough approximation)
-        // Most mlx models are 4-bit quantized, ~0.5 bytes per parameter
-        let paramCount = info.config?.embedding_size ?? 
-                        info.config?.hidden_size ?? 
-                        info.config?.vocab_size ?? 
-                        4096
-        
-        // Assume 4-bit quantization = 0.5 bytes per parameter
-        return Int64(paramCount * 1000) / 2
-    }
     
     // MARK: - Model Management
     
@@ -140,72 +37,77 @@ actor LLMEngine {
         }
     }
     
-    /// Get download URL for a model
-    func getModelDownloadURL(modelId: String) -> URL {
-        return URL(string: "https://huggingface.co/\(modelId)/resolve/main")!
-    }
-    
-    /// Download a model by its HuggingFace ID
+    /// Download a model by its mlx-community name
     func downloadModel(
-        modelId: String,
+        modelName: String,
         progressHandler: @escaping (Double, String) -> Void
     ) async throws -> LLMModel {
-        let modelName = modelId.components(separatedBy: "/").last ?? modelId
-        let destinationPath = NSString(string: "~/.cache/mlx-model/models/\(modelName)").expandingTildeInPath
+        // Ensure model name has mlx-community prefix
+        let fullModelId = modelName.hasPrefix("mlx-community/") ? modelName : "mlx-community/\(modelName)"
+        
+        // Create the model directory name (just the model name without prefix)
+        let modelDirName = modelName.components(separatedBy: "/").last ?? modelName
+        let destinationPath = NSString(string: "~/.cache/mlx-model/models/\(modelDirName)").expandingTildeInPath
         let destinationURL = URL(fileURLWithPath: destinationPath)
         
         // Check if already downloaded
         if FileManager.default.fileExists(atPath: destinationPath) {
-            throw LLMError.modelAlreadyExists(modelName)
+            throw LLMError.modelAlreadyExists(modelDirName)
         }
         
         // Create cache directory if needed
         let cachePath = NSString(string: "~/.cache/mlx-model/models").expandingTildeInPath
         try FileManager.default.createDirectory(atPath: cachePath, withIntermediateDirectories: true)
         
-        progressHandler(0, "Starting download...")
+        progressHandler(0, "Connecting to HuggingFace...")
         
-        // Use URLSession for native Swift download
-        let downloadURL = getModelDownloadURL(modelId: modelId)
-        let request = URLRequest(url: downloadURL)
+        // Use git clone to download the full model repository
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
+        process.arguments = ["clone", "--depth", "1", "\(hfBaseURL)/\(fullModelId)", destinationPath]
         
-        let (tempURL, response) = try await URLSession.shared.download(for: request)
+        let outputPipe = Pipe()
+        let errorPipe = Pipe()
+        process.standardOutput = outputPipe
+        process.standardError = errorPipe
         
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw LLMError.downloadFailed("Invalid response")
-        }
+        try process.run()
+        process.waitUntilExit()
         
-        if httpResponse.statusCode == 404 {
-            throw LLMError.downloadFailed("Model not found. Check if it's available in mlx-community.")
-        }
+        let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+        let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+        let output = String(data: outputData, encoding: .utf8) ?? ""
+        let errorOutput = String(data: errorData, encoding: .utf8) ?? ""
         
-        guard (200...299).contains(httpResponse.statusCode) else {
-            throw LLMError.downloadFailed("Server returned status \(httpResponse.statusCode)")
-        }
-        
-        // Handle redirect - get final URL
-        if let finalURL = httpResponse.url {
-            // Move to final destination
-            if FileManager.default.fileExists(atPath: destinationPath) {
-                try FileManager.default.removeItem(atPath: destinationPath)
-            }
+        if process.terminationStatus != 0 {
+            // Clean up partial download
+            try? FileManager.default.removeItem(atPath: destinationPath)
             
-            // If it's a file, move directly
-            if !finalURL.path.hasSuffix("/") {
-                try FileManager.default.moveItem(at: tempURL, to: destinationURL)
+            if errorOutput.contains("Repository not found") || errorOutput.contains("404") {
+                throw LLMError.downloadFailed("Model not found: \(fullModelId). Check the model name.")
             }
+            throw LLMError.downloadFailed("Download failed: \(errorOutput.prefix(200))")
         }
         
         progressHandler(1.0, "Download complete")
         
         // Create model entry
         return LLMModel(
-            name: modelName,
-            displayName: formatModelName(modelId),
+            name: modelDirName,
+            displayName: formatModelName(modelDirName),
             path: destinationPath,
             contextLength: 4096,
             description: "Downloaded from HuggingFace"
         )
+    }
+    
+    private func formatModelName(_ name: String) -> String {
+        // Convert "llama-3.2-1b-instruct" to "Llama 3.2 1B Instruct"
+        return name
+            .replacingOccurrences(of: "-", with: " ")
+            .split(separator: " ")
+            .map { $0.prefix(1).uppercased() + $0.dropFirst() }
+            .joined(separator: " ")
     }
     
     /// Delete a downloaded model
@@ -297,11 +199,6 @@ actor LLMEngine {
         return isLoaded
     }
     
-    /// Get available system memory
-    func getAvailableMemory() -> UInt64 {
-        return Foundation.ProcessInfo.processInfo.physicalMemory
-    }
-    
     // MARK: - Inference
     
     func generate(
@@ -340,70 +237,6 @@ actor LLMEngine {
         prompt += "Assistant:"
         return prompt
     }
-}
-
-// MARK: - HuggingFace API Models
-
-struct HuggingFaceModel: Identifiable {
-    let id: String
-    let name: String
-    let downloads: Int
-    let size: Int64
-    let category: ModelCategory
-    let tags: [String]
-    let lastModified: String
-    
-    var formattedSize: String {
-        let formatter = ByteCountFormatter()
-        formatter.countStyle = .file
-        return formatter.string(fromByteCount: size)
-    }
-    
-    var formattedDownloads: String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        return formatter.string(from: NSNumber(value: downloads)) ?? "\(downloads)"
-    }
-    
-    enum ModelCategory: String {
-        case vision = "Vision"
-        case instruct = "Instruct"
-        case text = "Text"
-        
-        var icon: String {
-            switch self {
-            case .vision: return "photo"
-            case .instruct: return "doc.text"
-            case .text: return "text.alignleft"
-            }
-        }
-    }
-}
-
-struct HFModelInfo: Codable {
-    let id: String?
-    let downloads: Int
-    let pipeline_tag: String?
-    let tags: [String]?
-    let lastModified: String?
-    let config: HFModelConfig?
-    let siblings: [HFFileInfo]?
-    
-    enum CodingKeys: String, CodingKey {
-        case id, downloads, pipeline_tag, tags, config, siblings
-        case lastModified = "lastModified"
-    }
-}
-
-struct HFModelConfig: Codable {
-    let vocab_size: Int?
-    let hidden_size: Int?
-    let embedding_size: Int?
-    let vision_enabled: Bool?
-}
-
-struct HFFileInfo: Codable {
-    let size: Int64?
 }
 
 // MARK: - Downloaded Model Metadata
