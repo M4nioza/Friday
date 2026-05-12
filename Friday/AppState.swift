@@ -7,6 +7,7 @@ final class AppState: ObservableObject {
     static let shared = AppState()
     
     @Published var showSettings: Bool = false
+    @Published var showModelManager: Bool = false
     @Published var showMemoryBrowser: Bool = false
     @Published var showCommandPalette: Bool = false
     @Published var isProcessing: Bool = false

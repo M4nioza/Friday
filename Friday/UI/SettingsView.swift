@@ -1,48 +1,86 @@
 import SwiftUI
 
-/// Settings panel
+/// Settings panel - System, Generation, Memory, About
 struct SettingsView: View {
     @EnvironmentObject var appState: AppState
     @Environment(\.dismiss) var dismiss
     
     var body: some View {
-        TabView {
-            // System Information
-            SystemStatusView()
-                .tabItem {
-                    Label("System", systemImage: "desktopcomputer")
+        VStack(spacing: 0) {
+            // Header with close button
+            HStack {
+                Text("Settings")
+                    .font(.headline)
+                Spacer()
+                Button(action: { dismiss() }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(.secondary)
                 }
+                .buttonStyle(.plain)
+            }
+            .padding()
+            .background(Color(nsColor: .controlBackgroundColor))
             
-            // Model Settings - separate tab with model management
-            ModelSettingsView()
-                .tabItem {
-                    Label("Model", systemImage: "cpu")
-                }
-            
-            // Generation Settings
-            GenerationSettingsView()
-                .tabItem {
-                    Label("Generation", systemImage: "slider.horizontal.3")
-                }
-            
-            // Brain Settings
-            BrainSettingsView()
-                .tabItem {
-                    Label("Memory", systemImage: "brain")
-                }
-            
-            // About
-            AboutView()
-                .tabItem {
-                    Label("About", systemImage: "info.circle")
-                }
+            TabView {
+                // System Information
+                SystemStatusView()
+                    .tabItem {
+                        Label("System", systemImage: "desktopcomputer")
+                    }
+                
+                // Generation Settings
+                GenerationSettingsView()
+                    .tabItem {
+                        Label("Generation", systemImage: "slider.horizontal.3")
+                    }
+                
+                // Brain Settings
+                BrainSettingsView()
+                    .tabItem {
+                        Label("Memory", systemImage: "brain")
+                    }
+                
+                // About
+                AboutView()
+                    .tabItem {
+                        Label("About", systemImage: "info.circle")
+                    }
+            }
         }
         .frame(width: 550, height: 500)
-        .padding()
     }
 }
 
-/// Model selection and configuration - separate view for the tab
+/// Model Manager panel - separate from Settings
+struct ModelManagerPanelView: View {
+    @EnvironmentObject var appState: AppState
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header with close button
+            HStack {
+                Text("Model Manager")
+                    .font(.headline)
+                Spacer()
+                Button(action: { dismiss() }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding()
+            .background(Color(nsColor: .controlBackgroundColor))
+            
+            ModelSettingsView()
+        }
+        .frame(width: 550, height: 500)
+    }
+}
+
+/// Model selection and configuration
 struct ModelSettingsView: View {
     @EnvironmentObject var appState: AppState
     @State private var downloadedModels: [DownloadedModelInfo] = []

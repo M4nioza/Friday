@@ -39,6 +39,9 @@ struct ContentView: View {
         .sheet(isPresented: $appState.showSettings) {
             SettingsView()
         }
+        .sheet(isPresented: $appState.showModelManager) {
+            ModelManagerPanelView()
+        }
         .sheet(isPresented: $appState.showMemoryBrowser) {
             MemoryBrowserView()
                 .frame(minWidth: 800, minHeight: 600)
@@ -352,11 +355,11 @@ struct SidebarView: View {
                 .buttonStyle(.plain)
             }
             
-            Section("Quick Links") {
+            Section("Model") {
                 Button(action: {
-                    appState.showSettings = true
+                    appState.showModelManager = true
                 }) {
-                    Label("Model Settings", systemImage: "cpu")
+                    Label("Model Manager", systemImage: "cpu")
                 }
                 .buttonStyle(.plain)
             }

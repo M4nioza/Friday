@@ -166,8 +166,8 @@ actor LLMEngine {
         
         print("[LLMEngine] Generating with model: \(modelId)")
         
-        // Build prompt from messages
-        let prompt = buildPrompt(from: messages)
+        // Build prompt from messages using chat format
+        let prompt = buildChatPrompt(from: messages)
         
         // Create temp file for prompt
         let tempDir = FileManager.default.temporaryDirectory
@@ -204,17 +204,10 @@ actor LLMEngine {
         let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
         let output = String(data: outputData, encoding: .utf8) ?? ""
         
-        // Read error for debugging
-        let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-        let errorOutput = String(data: errorData, encoding: .utf8) ?? ""
-        
         // Clean up
         try? FileManager.default.removeItem(at: promptFile)
         
         print("[LLMEngine] Raw output: \(output.prefix(200))")
-        if !errorOutput.isEmpty {
-            print("[LLMEngine] Error output: \(errorOutput.prefix(200))")
-        }
         
         // Parse response - mlx_lm outputs "Answer: ..." or just the text
         var response = output.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -233,21 +226,22 @@ actor LLMEngine {
         return response
     }
     
-    private func buildPrompt(from messages: [ChatMessage]) -> String {
-        var prompt = ""
+    /// Build prompt using Llama 3 chat format
+    private func buildChatPrompt(from messages: [ChatMessage]) -> String {
+        var prompt = "<|begin_of_text|>"
         
         for message in messages {
             switch message.role {
             case .system:
-                prompt += "System: \(message.content)\n\n"
+                prompt += "<|start_header_id|>system<|end_header_id|>\n\n\(message.content)<|eot_id|>"
             case .user:
-                prompt += "User: \(message.content)\n\n"
+                prompt += "<|start_header_id|>user<|end_header_id|>\n\n\(message.content)<|eot_id|>"
             case .assistant:
-                prompt += "Assistant: \(message.content)\n\n"
+                prompt += "<|start_header_id|>assistant<|end_header_id|>\n\n\(message.content)<|eot_id|>"
             }
         }
         
-        prompt += "Assistant:"
+        prompt += "<|start_header_id|>assistant<|end_header_id|>\n\n"
         return prompt
     }
     
