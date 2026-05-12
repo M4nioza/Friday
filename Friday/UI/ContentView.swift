@@ -7,6 +7,12 @@ struct ContentView: View {
     
     @State private var inputText: String = ""
     @State private var showingSidebar: Bool = true
+    @State private var showLogPanel: Bool = false
+    @State private var isModelLoaded: Bool = false
+    @State private var currentModelName: String = "No model"
+    @State private var logMessages: [String] = []
+    @State private var modelLoadingProgress: Double = 0
+    @State private var isModelLoading: Bool = false
     
     var body: some View {
         NavigationSplitView {
@@ -14,9 +20,21 @@ struct ContentView: View {
             SidebarView()
                 .frame(minWidth: 250)
         } detail: {
-            // Main chat area
-            ChatContainerView()
-                .frame(minWidth: 400)
+            // Main chat area with status bar
+            VStack(spacing: 0) {
+                ChatContainerView()
+                    .frame(minWidth: 400)
+                
+                // Status bar at bottom
+                StatusBarView(
+                    isModelLoaded: $isModelLoaded,
+                    currentModelName: $currentModelName,
+                    logMessages: $logMessages,
+                    showLogPanel: $showLogPanel,
+                    isModelLoading: $isModelLoading,
+                    modelLoadingProgress: $modelLoadingProgress
+                )
+            }
         }
         .sheet(isPresented: $appState.showSettings) {
             SettingsView()
@@ -28,6 +46,28 @@ struct ContentView: View {
         .sheet(isPresented: $appState.showCommandPalette) {
             CommandPaletteView()
         }
+        .task {
+            await checkModelStatus()
+        }
+    }
+    
+    private func checkModelStatus() async {
+        isModelLoaded = await LLMEngine.shared.isModelLoaded()
+        if let model = await LLMEngine.shared.getCurrentModel() {
+            currentModelName = model.displayName
+        }
+        
+        // Log initial status
+        addLog("Friday started. Model: \(currentModelName) [\(isModelLoaded ? "LOADED" : "NOT LOADED")]")
+    }
+    
+    private func addLog(_ message: String) {
+        let timestamp = DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .medium)
+        logMessages.insert("[\(timestamp)] \(message)", at: 0)
+        if logMessages.count > 100 {
+            logMessages.removeLast()
+        }
+        print("[Status] \(message)")
     }
 }
 
@@ -315,5 +355,133 @@ struct SidebarView: View {
             }
         }
         .listStyle(.sidebar)
+    }
+}
+
+/// Status bar showing model status and logs at the bottom of the app
+struct StatusBarView: View {
+    @Binding var isModelLoaded: Bool
+    @Binding var currentModelName: String
+    @Binding var logMessages: [String]
+    @Binding var showLogPanel: Bool
+    @Binding var isModelLoading: Bool
+    @Binding var modelLoadingProgress: Double
+    
+    @State private var isExpanded: Bool = false
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Expandable log panel
+            if showLogPanel {
+                LogPanelView(logMessages: $logMessages)
+                    .frame(height: 150)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+            
+            // Main status bar
+            HStack(spacing: 16) {
+                // Model status indicator
+                HStack(spacing: 8) {
+                    Circle()
+                        .fill(isModelLoaded ? Color.green : Color.red)
+                        .frame(width: 8, height: 8)
+                    
+                    if isModelLoading {
+                        ProgressView()
+                            .scaleEffect(0.6)
+                        Text("Loading \(currentModelName)...")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text(isModelLoaded ? "Model: \(currentModelName)" : "No model loaded")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                Divider()
+                    .frame(height: 16)
+                
+                // Ollama status
+                HStack(spacing: 4) {
+                    Image(systemName: "network")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    Text("Ollama")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+                
+                // Toggle log panel button
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        showLogPanel.toggle()
+                    }
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: showLogPanel ? "chevron.down" : "chevron.up")
+                            .font(.caption)
+                        Text("Logs")
+                            .font(.caption)
+                    }
+                    .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(Color(nsColor: .controlBackgroundColor))
+        }
+    }
+}
+
+/// Log panel showing application logs
+struct LogPanelView: View {
+    @Binding var logMessages: [String]
+    @State private var autoScroll: Bool = true
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                Text("Activity Log")
+                    .font(.caption)
+                    .fontWeight(.medium)
+                Spacer()
+                Toggle("Auto-scroll", isOn: $autoScroll)
+                    .toggleStyle(.switch)
+                    .scaleEffect(0.7)
+                    .font(.caption2)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(Color(nsColor: .controlBackgroundColor).opacity(0.8))
+            
+            // Log messages
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 2) {
+                        ForEach(Array(logMessages.enumerated()), id: \.offset) { index, message in
+                            Text(message)
+                                .font(.system(size: 10, design: .monospaced))
+                                .foregroundColor(.secondary)
+                                .id(index)
+                        }
+                    }
+                    .padding(8)
+                }
+                .onChange(of: logMessages.count) { _, _ in
+                    if autoScroll, let lastIndex = logMessages.indices.last {
+                        withAnimation {
+                            proxy.scrollTo(lastIndex, anchor: .bottom)
+                        }
+                    }
+                }
+            }
+            .background(Color.black.opacity(0.1))
+        }
+        .background(Color(nsColor: .windowBackgroundColor))
     }
 }

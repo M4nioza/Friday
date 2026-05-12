@@ -325,24 +325,28 @@ actor LLMEngine {
         maxTokens: Int = 2048,
         onToken: TokenHandler? = nil
     ) async throws -> String {
-        guard isLoaded, let model = currentModel else {
-            throw LLMEngineError.modelNotLoaded
-        }
+        // Get model info - use default if none loaded
+        let model = currentModel ?? LLMModel.defaultModel
+        print("[LLMEngine] Using model: \(model.displayName)")
         
-        let prompt = buildPrompt(from: messages)
-        print("[LLMEngine] Generating response...")
-        
-        // Try Ollama first
+        // Try Ollama first if available
         if await checkOllamaAvailable() {
+            print("[LLMEngine] Ollama is available, trying inference...")
             do {
+                let prompt = buildPrompt(from: messages)
                 let response = try await generateWithOllama(prompt: prompt, temperature: temperature, maxTokens: maxTokens)
+                print("[LLMEngine] Ollama response received, length: \(response.count)")
                 return response
             } catch {
-                print("[LLMEngine] Ollama generation failed: \(error)")
+                print("[LLMEngine] Ollama inference failed: \(error), falling back to contextual responses")
             }
+        } else {
+            print("[LLMEngine] Ollama not available")
         }
         
-        // Use smart contextual response
+        // Fall back to smart contextual responses
+        print("[LLMEngine] Using contextual response mode")
+        let prompt = buildPrompt(from: messages)
         return generateSmartResponse(prompt: prompt, model: model)
     }
     

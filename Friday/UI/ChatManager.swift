@@ -48,16 +48,25 @@ final class ChatManager: ObservableObject {
         isProcessing = true
         error = nil
         
+        print("[ChatManager] User message: \(content)")
+        
+        // Check if model is loaded
+        let modelLoaded = await LLMEngine.shared.isModelLoaded()
+        let currentModel = await LLMEngine.shared.getCurrentModel()
+        print("[ChatManager] Model status - Loaded: \(modelLoaded), Model: \(currentModel?.displayName ?? "None")")
+        
         // Add user message
         let userMessage = ChatMessage(role: .user, content: content)
         messages.append(userMessage)
         
         do {
             // Build context
+            print("[ChatManager] Building context...")
             let context = await ContextManager.shared.buildContext(
                 messages: messages,
                 brainQuery: content
             )
+            print("[ChatManager] Context built, length: \(context.count) chars")
             
             // Create system message with context
             let systemMessage = ChatMessage(
@@ -66,6 +75,7 @@ final class ChatManager: ObservableObject {
             )
             
             // Generate response
+            print("[ChatManager] Calling LLMEngine.generate()...")
             let fullMessages = [systemMessage] + messages
             let response = try await LLMEngine.shared.generate(
                 messages: fullMessages,
@@ -73,11 +83,13 @@ final class ChatManager: ObservableObject {
                 maxTokens: AppState.shared.maxTokens
             )
             
+            print("[ChatManager] Response received, length: \(response.count) chars")
+            
             // Add assistant response
             let assistantMessage = ChatMessage(
                 role: .assistant,
                 content: response,
-                modelUsed: AppState.shared.currentModel.name
+                modelUsed: currentModel?.displayName ?? "Unknown"
             )
             messages.append(assistantMessage)
             
@@ -93,6 +105,7 @@ final class ChatManager: ObservableObject {
             saveConversations()
             
         } catch {
+            print("[ChatManager] Error: \(error.localizedDescription)")
             self.error = error.localizedDescription
             
             // Add error message
