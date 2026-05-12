@@ -1,7 +1,6 @@
 import Foundation
 
 /// LLM Engine that handles model loading and inference using the mlx_lm CLI
-/// Simple wrapper around the existing mlx_lm command-line tool
 actor LLMEngine {
     static let shared = LLMEngine()
     
@@ -34,25 +33,49 @@ actor LLMEngine {
     func getDownloadedModels() async -> [DownloadedModelInfo] {
         var models: [DownloadedModelInfo] = []
         
-        // Only check mlx-model cache (where mlx_lm downloads models)
+        // Check mlx-model cache (converted MLX models)
         let mlxCache = NSString(string: "~/.cache/mlx-model/models").expandingTildeInPath
-        let mlxDir = URL(fileURLWithPath: mlxCache)
-        
-        if let mlxContents = try? FileManager.default.contentsOfDirectory(atPath: mlxDir.path) {
+        if let mlxContents = try? FileManager.default.contentsOfDirectory(atPath: mlxCache) {
             for folder in mlxContents {
-                // Skip if not a directory
                 var isDir: ObjCBool = false
-                guard FileManager.default.fileExists(atPath: folder, isDirectory: &isDir), isDir.boolValue else { continue }
+                let fullPath = (mlxCache as NSString).appendingPathComponent(folder)
+                guard FileManager.default.fileExists(atPath: fullPath, isDirectory: &isDir), isDir.boolValue else { continue }
                 
-                let modelName = (folder as NSString).lastPathComponent
-                let size = folderSize(at: URL(fileURLWithPath: folder))
+                let size = folderSize(at: URL(fileURLWithPath: fullPath))
+                guard size > 1024 else { continue }
                 
-                // Skip empty folders (incomplete downloads)
+                let modelInfo = DownloadedModelInfo(
+                    name: folder,
+                    path: fullPath,
+                    contextLength: 4096,
+                    sizeInBytes: size
+                )
+                models.append(modelInfo)
+            }
+        }
+        
+        // Also check HuggingFace hub for mlx-community models
+        let hubDir = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".cache")
+            .appendingPathComponent("huggingface")
+            .appendingPathComponent("hub")
+        
+        if let contents = try? FileManager.default.contentsOfDirectory(atPath: hubDir.path) {
+            for folder in contents {
+                let folderName = (folder as NSString).lastPathComponent
+                guard folderName.hasPrefix("models--") else { continue }
+                let modelName = folderName.replacingOccurrences(of: "models--", with: "").replacingOccurrences(of: "--", with: "/")
+                
+                // Only include mlx-community models
+                guard modelName.contains("mlx-community") else { continue }
+                
+                let fullPath = (hubDir.path as NSString).appendingPathComponent(folder)
+                let size = folderSize(at: URL(fileURLWithPath: fullPath))
                 guard size > 1024 else { continue }
                 
                 let modelInfo = DownloadedModelInfo(
                     name: modelName,
-                    path: folder,
+                    path: fullPath,
                     contextLength: 4096,
                     sizeInBytes: size
                 )
@@ -130,7 +153,7 @@ actor LLMEngine {
     
     // MARK: - Inference
     
-    /// Generate a response
+    /// Generate a response using mlx_lm chat
     func generate(
         messages: [ChatMessage],
         temperature: Double = 0.7,
@@ -141,9 +164,10 @@ actor LLMEngine {
             throw LLMEngineError.modelNotLoaded
         }
         
+        print("[LLMEngine] Generating with model: \(modelId)")
+        
         // Build prompt from messages
         let prompt = buildPrompt(from: messages)
-        print("[LLMEngine] Generating with model: \(modelId)")
         
         // Create temp file for prompt
         let tempDir = FileManager.default.temporaryDirectory
@@ -152,7 +176,7 @@ actor LLMEngine {
         // Write prompt to file
         try prompt.write(to: promptFile, atomically: true, encoding: .utf8)
         
-        // Run mlx_lm generate
+        // Run mlx_lm generate with file input
         let process = Process()
         process.executableURL = URL(fileURLWithPath: mlxBinary)
         process.arguments = [
@@ -160,13 +184,13 @@ actor LLMEngine {
             "--model", modelId,
             "--prompt", "@\(promptFile.path)",
             "--max-tokens", "\(maxTokens)",
-            "--temp", "\(temperature)",
-            "--verbose"
+            "--temp", "\(temperature)"
         ]
         
         let outputPipe = Pipe()
+        let errorPipe = Pipe()
         process.standardOutput = outputPipe
-        process.standardError = FileHandle.nullDevice
+        process.standardError = errorPipe
         
         do {
             try process.run()
@@ -180,13 +204,29 @@ actor LLMEngine {
         let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
         let output = String(data: outputData, encoding: .utf8) ?? ""
         
+        // Read error for debugging
+        let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+        let errorOutput = String(data: errorData, encoding: .utf8) ?? ""
+        
         // Clean up
         try? FileManager.default.removeItem(at: promptFile)
         
-        // Parse response - mlx_lm outputs "Answer: ..." format
-        var response = output
-        if let range = output.range(of: "Answer:") {
-            response = String(output[range.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
+        print("[LLMEngine] Raw output: \(output.prefix(200))")
+        if !errorOutput.isEmpty {
+            print("[LLMEngine] Error output: \(errorOutput.prefix(200))")
+        }
+        
+        // Parse response - mlx_lm outputs "Answer: ..." or just the text
+        var response = output.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // Remove the prompt echo if present
+        if let promptEnd = response.range(of: prompt.trimmingCharacters(in: .whitespacesAndNewlines)) {
+            response = String(response[promptEnd.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        
+        // Remove "Answer:" prefix if present
+        if let answerIndex = response.range(of: "Answer:", options: .caseInsensitive) {
+            response = String(response[answerIndex.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
         }
         
         print("[LLMEngine] Generated response (\(response.count) chars)")
@@ -227,14 +267,17 @@ actor LLMEngine {
         process.arguments = ["download", "--model", modelName]
         
         let outputPipe = Pipe()
+        let errorPipe = Pipe()
         process.standardOutput = outputPipe
-        process.standardError = FileHandle.nullDevice
+        process.standardError = errorPipe
         
         do {
             try process.run()
             process.waitUntilExit()
         } catch {
-            throw LLMEngineError.downloadFailed(error.localizedDescription)
+            let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+            let errorMessage = String(data: errorData, encoding: .utf8) ?? error.localizedDescription
+            throw LLMEngineError.downloadFailed(errorMessage)
         }
         
         progressHandler(1.0, "Download complete")
