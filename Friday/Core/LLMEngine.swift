@@ -144,8 +144,10 @@ actor LLMEngine {
     func loadModel(_ modelInfo: LLMModel) async throws {
         let expandedPath = NSString(string: modelInfo.path).expandingTildeInPath
         
-        guard FileManager.default.fileExists(atPath: expandedPath) else {
-            throw LLMEngineError.modelNotFound(modelInfo.name, modelInfo.path)
+        // Check if model files exist, if not download
+        if !FileManager.default.fileExists(atPath: expandedPath) {
+            print("[LLMEngine] Model not found at \(expandedPath), downloading...")
+            print("[LLMEngine] Model will be downloaded on first use via mlx_lm")
         }
         
         if isLoaded {
@@ -153,12 +155,13 @@ actor LLMEngine {
         }
         
         print("[LLMEngine] Loading model: \(modelInfo.name)")
+        print("[LLMEngine] Will use HuggingFace model: \(modelInfo.hfModelId)")
         
         self.currentModel = modelInfo
-        self.mlxModelName = "mlx-community/\(modelInfo.name)"
+        self.mlxModelName = modelInfo.hfModelId
         self.isLoaded = true
         
-        print("[LLMEngine] Model loaded: \(modelInfo.displayName)")
+        print("[LLMEngine] Model ready: \(modelInfo.displayName)")
     }
     
     /// Unload the current model

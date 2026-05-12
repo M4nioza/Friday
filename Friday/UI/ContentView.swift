@@ -402,12 +402,12 @@ struct StatusBarView: View {
                 Divider()
                     .frame(height: 16)
                 
-                // Ollama status
+                // MLX status
                 HStack(spacing: 4) {
-                    Image(systemName: "network")
+                    Image(systemName: "cpu")
                         .font(.caption2)
                         .foregroundColor(.secondary)
-                    Text("Ollama")
+                    Text("MLX")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
