@@ -45,7 +45,7 @@ struct SettingsView: View {
 /// Model selection and configuration - separate view for the tab
 struct ModelSettingsView: View {
     @EnvironmentObject var appState: AppState
-    @State private var downloadedModels: [DownloadedModel] = []
+    @State private var downloadedModels: [DownloadedModelInfo] = []
     @State private var isLoading = true
     @State private var isDownloading = false
     @State private var downloadProgress: Double = 0
@@ -214,7 +214,7 @@ struct ModelSettingsView: View {
         }
     }
     
-    private func loadModel(_ model: DownloadedModel) {
+    private func loadModel(_ model: DownloadedModelInfo) {
         Task {
             do {
                 let llmModel = LLMModel(
@@ -235,7 +235,7 @@ struct ModelSettingsView: View {
         }
     }
     
-    private func deleteModel(_ model: DownloadedModel) {
+    private func deleteModel(_ model: DownloadedModelInfo) {
         Task {
             if appState.currentModel.path == model.path && isModelLoaded {
                 await LLMEngine.shared.unloadModel()

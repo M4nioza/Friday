@@ -3,13 +3,13 @@ import SwiftUI
 /// Model manager view for downloading, deleting, and selecting models
 struct ModelManagerView: View {
     @EnvironmentObject var appState: AppState
-    @State private var downloadedModels: [DownloadedModel] = []
+    @State private var downloadedModels: [DownloadedModelInfo] = []
     @State private var isLoading = true
     @State private var isDownloading = false
     @State private var downloadProgress: Double = 0
     @State private var downloadStatus = ""
     @State private var showDeleteConfirmation = false
-    @State private var modelToDelete: DownloadedModel?
+    @State private var modelToDelete: DownloadedModelInfo?
     @State private var errorMessage: String?
     @State private var showError = false
     @State private var isModelLoaded = false
@@ -137,7 +137,7 @@ struct ModelManagerView: View {
             } else {
                 List {
                     ForEach(downloadedModels) { model in
-                        DownloadedModelRowView(
+                        DownloadedModelInfoRowView(
                             model: model,
                             isLoaded: appState.currentModel.path == model.path && isModelLoaded,
                             onLoad: { loadModel(model) },
@@ -200,7 +200,7 @@ struct ModelManagerView: View {
         isModelLoaded = await LLMEngine.shared.isModelLoaded()
     }
     
-    private func loadModel(_ model: DownloadedModel) {
+    private func loadModel(_ model: DownloadedModelInfo) {
         Task {
             do {
                 let llmModel = LLMModel(
@@ -228,7 +228,7 @@ struct ModelManagerView: View {
         }
     }
     
-    private func confirmDelete(_ model: DownloadedModel) {
+    private func confirmDelete(_ model: DownloadedModelInfo) {
         modelToDelete = model
         showDeleteConfirmation = true
     }
@@ -329,8 +329,8 @@ struct DownloadModelSection: View {
 }
 
 /// Row view for a downloaded model
-struct DownloadedModelRowView: View {
-    let model: DownloadedModel
+struct DownloadedModelInfoRowView: View {
+    let model: DownloadedModelInfo
     let isLoaded: Bool
     let onLoad: () -> Void
     let onUnload: () -> Void
