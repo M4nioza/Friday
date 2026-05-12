@@ -1,0 +1,43 @@
+name: Friday
+options:
+  bundleIdPrefix: com.friday
+  deploymentTarget:
+    macOS: "14.0"
+  xcodeVersion: "15.0"
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    PRODUCT_NAME: Friday
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.9"
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+    CODE_SIGN_IDENTITY: "-"
+    CODE_SIGN_STYLE: Manual
+    DEVELOPMENT_TEAM: ""
+    ENABLE_HARDENED_RUNTIME: YES
+    INFOPLIST_FILE: Friday/Info.plist
+
+targets:
+  Friday:
+    type: application
+    platform: macOS
+    sources:
+      - path: Friday
+        excludes:
+          - "*.xcodeproj"
+          - "*.xcworkspace"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.friday.assistant
+        INFOPLIST_FILE: Friday/Info.plist
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        COMBINE_HIDPI_IMAGES: YES
+    entitlements:
+      path: Friday/Friday.entitlements
+      properties:
+        com.apple.security.app-sandbox: false
+        com.apple.security.automation.apple-events: true
+    dependencies: []

@@ -1,0 +1,384 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		355994E56A3DADB26F4910B6 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4980384A323C78E7074210B /* AppState.swift */; };
+		4CACA52CF38EA77F91AA1D66 /* MemoryBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75FF303AA2982369101A2128 /* MemoryBrowserView.swift */; };
+		697886CFB2A39E063C9092A8 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AEBFC6B09E77DDE002D1091 /* main.swift */; };
+		78F6B8D1E273E197EF6B918C /* TaskPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A323BBE91B0DE01D5A4C2FDE /* TaskPlanner.swift */; };
+		94736A2E569F3F9CC845784C /* ChatManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1CF918004DB53EDFE02CAE /* ChatManager.swift */; };
+		9E7286BC70B62A99EA3D8277 /* ModelManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54BA29245B7FC491B0C00971 /* ModelManagerView.swift */; };
+		A3B4A1C6C261DE6B1BC34D6B /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C43800E91AC725610C62109C /* AppDelegate.swift */; };
+		ABEC57039B56F496F3A93EB3 /* CommandPaletteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAA1BF95B69990847377C69E /* CommandPaletteView.swift */; };
+		B451DFBEB30C0E9420D2C663 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BA0AE45E7070E47A181336E /* ContentView.swift */; };
+		B7F6C17B57BF0CE63EA14733 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BD23273C7028920FEE43D2F /* SettingsView.swift */; };
+		BEAABC400151C78D6D6E5478 /* ContextManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C510D1FCB590CC146828F4E /* ContextManager.swift */; };
+		C8ED79459744061FB7449B75 /* LLMEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4B62F8F339D7210D15BCA2F /* LLMEngine.swift */; };
+		D13CD163EAE7C281132AF306 /* BrainSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DEDAEC08CCC30FC41271487 /* BrainSystem.swift */; };
+		EF66BE11E90999132E49BD0A /* LLMModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02D80ACB88CADAC4D6F33CDF /* LLMModel.swift */; };
+		F67019B8CAB4E19C36F3EA64 /* SystemIntegration.swift in Sources */ = {isa = PBXBuildFile; fileRef = A360048790B79250D0F7A842 /* SystemIntegration.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		02D80ACB88CADAC4D6F33CDF /* LLMModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMModel.swift; sourceTree = "<group>"; };
+		0BD23273C7028920FEE43D2F /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		1BA0AE45E7070E47A181336E /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		29D508F40C7D0C1FD5CAF20E /* Friday.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Friday.entitlements; sourceTree = "<group>"; };
+		39A3B17108AF73EEF30F26A1 /* Friday.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Friday.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4AEBFC6B09E77DDE002D1091 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		54BA29245B7FC491B0C00971 /* ModelManagerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelManagerView.swift; sourceTree = "<group>"; };
+		75FF303AA2982369101A2128 /* MemoryBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryBrowserView.swift; sourceTree = "<group>"; };
+		7A1CF918004DB53EDFE02CAE /* ChatManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatManager.swift; sourceTree = "<group>"; };
+		7F2881FFCA99C93C33F98684 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		8C510D1FCB590CC146828F4E /* ContextManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContextManager.swift; sourceTree = "<group>"; };
+		9DEDAEC08CCC30FC41271487 /* BrainSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrainSystem.swift; sourceTree = "<group>"; };
+		A323BBE91B0DE01D5A4C2FDE /* TaskPlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskPlanner.swift; sourceTree = "<group>"; };
+		A360048790B79250D0F7A842 /* SystemIntegration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemIntegration.swift; sourceTree = "<group>"; };
+		A4B62F8F339D7210D15BCA2F /* LLMEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMEngine.swift; sourceTree = "<group>"; };
+		C43800E91AC725610C62109C /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		CAA1BF95B69990847377C69E /* CommandPaletteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandPaletteView.swift; sourceTree = "<group>"; };
+		F4980384A323C78E7074210B /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		1AD2680FEAC920DC6B7E8F09 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				A4B62F8F339D7210D15BCA2F /* LLMEngine.swift */,
+				02D80ACB88CADAC4D6F33CDF /* LLMModel.swift */,
+				A323BBE91B0DE01D5A4C2FDE /* TaskPlanner.swift */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		41C81373C327D57B866F7942 = {
+			isa = PBXGroup;
+			children = (
+				F3C99D8B127238FDB9F36D1B /* Friday */,
+				4A1B4EA29D7631AC0AB91B51 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		4A1B4EA29D7631AC0AB91B51 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				39A3B17108AF73EEF30F26A1 /* Friday.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		6790ECCF118948A707545B2D /* System */ = {
+			isa = PBXGroup;
+			children = (
+				A360048790B79250D0F7A842 /* SystemIntegration.swift */,
+			);
+			path = System;
+			sourceTree = "<group>";
+		};
+		D367B86CFE75C1D1FA9C97E4 /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				7A1CF918004DB53EDFE02CAE /* ChatManager.swift */,
+				CAA1BF95B69990847377C69E /* CommandPaletteView.swift */,
+				1BA0AE45E7070E47A181336E /* ContentView.swift */,
+				75FF303AA2982369101A2128 /* MemoryBrowserView.swift */,
+				54BA29245B7FC491B0C00971 /* ModelManagerView.swift */,
+				0BD23273C7028920FEE43D2F /* SettingsView.swift */,
+			);
+			path = UI;
+			sourceTree = "<group>";
+		};
+		E5213E3690A4BE86AA14DBF1 /* Brain */ = {
+			isa = PBXGroup;
+			children = (
+				9DEDAEC08CCC30FC41271487 /* BrainSystem.swift */,
+				8C510D1FCB590CC146828F4E /* ContextManager.swift */,
+			);
+			path = Brain;
+			sourceTree = "<group>";
+		};
+		F3C99D8B127238FDB9F36D1B /* Friday */ = {
+			isa = PBXGroup;
+			children = (
+				C43800E91AC725610C62109C /* AppDelegate.swift */,
+				F4980384A323C78E7074210B /* AppState.swift */,
+				29D508F40C7D0C1FD5CAF20E /* Friday.entitlements */,
+				7F2881FFCA99C93C33F98684 /* Info.plist */,
+				4AEBFC6B09E77DDE002D1091 /* main.swift */,
+				E5213E3690A4BE86AA14DBF1 /* Brain */,
+				1AD2680FEAC920DC6B7E8F09 /* Core */,
+				6790ECCF118948A707545B2D /* System */,
+				D367B86CFE75C1D1FA9C97E4 /* UI */,
+			);
+			path = Friday;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		FC4FC60C7F3B801CCB777098 /* Friday */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1DB4B19F19D791157FCFA6F8 /* Build configuration list for PBXNativeTarget "Friday" */;
+			buildPhases = (
+				2CDA7FB6841E99D73B7B83F5 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Friday;
+			packageProductDependencies = (
+			);
+			productName = Friday;
+			productReference = 39A3B17108AF73EEF30F26A1 /* Friday.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		5D81125920C87ABC678B7C36 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					FC4FC60C7F3B801CCB777098 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Manual;
+					};
+				};
+			};
+			buildConfigurationList = AE3D44B66D09B92FC5EAA670 /* Build configuration list for PBXProject "Friday" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 41C81373C327D57B866F7942;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 4A1B4EA29D7631AC0AB91B51 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				FC4FC60C7F3B801CCB777098 /* Friday */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		2CDA7FB6841E99D73B7B83F5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A3B4A1C6C261DE6B1BC34D6B /* AppDelegate.swift in Sources */,
+				355994E56A3DADB26F4910B6 /* AppState.swift in Sources */,
+				D13CD163EAE7C281132AF306 /* BrainSystem.swift in Sources */,
+				94736A2E569F3F9CC845784C /* ChatManager.swift in Sources */,
+				ABEC57039B56F496F3A93EB3 /* CommandPaletteView.swift in Sources */,
+				B451DFBEB30C0E9420D2C663 /* ContentView.swift in Sources */,
+				BEAABC400151C78D6D6E5478 /* ContextManager.swift in Sources */,
+				C8ED79459744061FB7449B75 /* LLMEngine.swift in Sources */,
+				EF66BE11E90999132E49BD0A /* LLMModel.swift in Sources */,
+				4CACA52CF38EA77F91AA1D66 /* MemoryBrowserView.swift in Sources */,
+				9E7286BC70B62A99EA3D8277 /* ModelManagerView.swift in Sources */,
+				B7F6C17B57BF0CE63EA14733 /* SettingsView.swift in Sources */,
+				F67019B8CAB4E19C36F3EA64 /* SystemIntegration.swift in Sources */,
+				78F6B8D1E273E197EF6B918C /* TaskPlanner.swift in Sources */,
+				697886CFB2A39E063C9092A8 /* main.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		04BD9011C6015861E1D51CBA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Friday/Friday.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = Friday/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = com.friday.assistant;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		0DD8900A1BCB76AD680B7E65 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_FILE = Friday/Info.plist;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = Friday;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Release;
+		};
+		1B499B6394106BDFEAC7F364 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Friday/Friday.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = Friday/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = com.friday.assistant;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		D6EA757967F4E541C3EECEBC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_FILE = Friday/Info.plist;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = Friday;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1DB4B19F19D791157FCFA6F8 /* Build configuration list for PBXNativeTarget "Friday" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				04BD9011C6015861E1D51CBA /* Debug */,
+				1B499B6394106BDFEAC7F364 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		AE3D44B66D09B92FC5EAA670 /* Build configuration list for PBXProject "Friday" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D6EA757967F4E541C3EECEBC /* Debug */,
+				0DD8900A1BCB76AD680B7E65 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 5D81125920C87ABC678B7C36 /* Project object */;
+}

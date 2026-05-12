@@ -1,0 +1,28 @@
+# macOS
+.DS_Store
+*.swp
+*~
+
+# Xcode
+xcuserdata/
+*.xcuserstate
+*.xccheckout
+*.moved-aside
+DerivedData/
+*.pbxuser
+!*.pbxuser
+
+# Build
+build/
+*.app
+*.dSYM
+
+# IDE
+.vscode/
+.idea/
+
+# Swift Package Manager
+Packages/
+*.xcodeproj
+xcscheme
+!*.xcodeproj/xcshareddata/xcschemes/*.xcscheme
