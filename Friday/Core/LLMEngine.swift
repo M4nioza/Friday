@@ -34,40 +34,22 @@ actor LLMEngine {
     func getDownloadedModels() async -> [DownloadedModelInfo] {
         var models: [DownloadedModelInfo] = []
         
-        // Check mlx-model cache first (primary location for MLX models)
+        // Only check mlx-model cache (where mlx_lm downloads models)
         let mlxCache = NSString(string: "~/.cache/mlx-model/models").expandingTildeInPath
         let mlxDir = URL(fileURLWithPath: mlxCache)
         
         if let mlxContents = try? FileManager.default.contentsOfDirectory(atPath: mlxDir.path) {
             for folder in mlxContents {
+                // Skip if not a directory
+                var isDir: ObjCBool = false
+                guard FileManager.default.fileExists(atPath: folder, isDirectory: &isDir), isDir.boolValue else { continue }
+                
                 let modelName = (folder as NSString).lastPathComponent
                 let size = folderSize(at: URL(fileURLWithPath: folder))
-                let modelInfo = DownloadedModelInfo(
-                    name: modelName,
-                    path: folder,
-                    contextLength: 4096,
-                    sizeInBytes: size
-                )
-                models.append(modelInfo)
-            }
-        }
-        
-        // Also check HuggingFace hub for mlx-community models only
-        let hubDir = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".cache")
-            .appendingPathComponent("huggingface")
-            .appendingPathComponent("hub")
-        
-        if let contents = try? FileManager.default.contentsOfDirectory(atPath: hubDir.path) {
-            for folder in contents {
-                let folderName = (folder as NSString).lastPathComponent
-                guard folderName.hasPrefix("models--") else { continue }
-                let modelName = folderName.replacingOccurrences(of: "models--", with: "").replacingOccurrences(of: "--", with: "/")
                 
-                // Only include mlx-community models
-                guard modelName.contains("mlx-community") else { continue }
+                // Skip empty folders (incomplete downloads)
+                guard size > 1024 else { continue }
                 
-                let size = folderSize(at: URL(fileURLWithPath: folder))
                 let modelInfo = DownloadedModelInfo(
                     name: modelName,
                     path: folder,
