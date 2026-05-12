@@ -301,12 +301,6 @@ struct DownloadModelSheet: View {
     let onDownload: () -> Void
     let onCancel: () -> Void
     
-    @State private var suggestedURLs: [SuggestedModel] = [
-        SuggestedModel(name: "Llama 3.2 1B", url: "https://huggingface.co/mlx-community/Llama-3.2-1B-Instruct-4bit", description: "Lightweight, fast"),
-        SuggestedModel(name: "Phi-3.5 Mini", url: "https://huggingface.co/mlx-community/phi-3.5-mini-instruct-4bit", description: "Good balance"),
-        SuggestedModel(name: "Mistral 7B", url: "https://huggingface.co/mlx-community/Mistral-7B-Instruct-v0.2-4bit", description: "High quality")
-    ]
-    
     var body: some View {
         VStack(spacing: 20) {
             // Header
@@ -320,49 +314,34 @@ struct DownloadModelSheet: View {
                 }
             }
             
-            // Suggested models
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Quick Download")
+            // Instructions
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Enter a HuggingFace mlx-community URL")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                 
-                ForEach(suggestedURLs) { model in
-                    Button(action: {
-                        url = model.url
-                        onDownload()
-                    }) {
-                        HStack {
-                            VStack(alignment: .leading) {
-                                Text(model.name)
-                                    .font(.headline)
-                                Text(model.description)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            Spacer()
-                            Image(systemName: "arrow.down.circle")
-                                .foregroundColor(.blue)
-                        }
-                        .padding()
-                        .background(Color(nsColor: .controlBackgroundColor))
-                        .cornerRadius(8)
-                    }
-                    .buttonStyle(.plain)
+                VStack(alignment: .leading, spacing: 4) {
+                    Label("Text instruct models (Llama, Mistral, Phi, Qwen, Gemma...)", systemImage: "doc.text")
+                    Label("Vision instruct models (for image understanding)", systemImage: "photo")
+                    Label("Any MLX-compatible model from HuggingFace", systemImage: "cpu")
                 }
+                .font(.caption)
+                .foregroundColor(.secondary)
             }
+            .padding()
+            .background(Color(nsColor: .controlBackgroundColor))
+            .cornerRadius(8)
             
-            Divider()
-            
-            // Custom URL
+            // URL Input
             VStack(alignment: .leading, spacing: 8) {
-                Text("Or enter a custom HuggingFace URL")
+                Text("Model URL")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                 
-                TextField("https://huggingface.co/...", text: $url)
+                TextField("https://huggingface.co/mlx-community/...", text: $url)
                     .textFieldStyle(.roundedBorder)
                 
-                Text("Make sure to use the mlx-community variants for Apple Silicon")
+                Text("Use mlx-community variants for Apple Silicon optimization")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -377,14 +356,6 @@ struct DownloadModelSheet: View {
             }
         }
         .padding()
-        .frame(width: 400, height: 350)
+        .frame(width: 450, height: 300)
     }
-}
-
-/// Suggested model for quick download
-struct SuggestedModel: Identifiable {
-    let id = UUID()
-    let name: String
-    let url: String
-    let description: String
 }

@@ -61,7 +61,6 @@ A native macOS AI assistant powered by local MLX-based LLM models with persisten
 
 - macOS 14.0 (Sonoma) or later
 - Apple Silicon (M1, M2, M3, M4) or Intel Mac
-- MLX Python package installed: `pip install mlx mlx_lm transformers`
 
 ## Installation
 
@@ -78,24 +77,27 @@ cd Friday
 xcodegen generate
 ```
 
-3. Open the project in Xcode:
+3. Build the project:
 ```bash
-open Friday.xcodeproj
+xcodebuild -project Friday.xcodeproj -scheme Friday -configuration Release build
 ```
 
-4. Build and run (Cmd+R)
+4. The app will be created at `build/Release/Friday.app`
 
 ### Model Setup
 
-1. Download MLX-compatible models to `~/.cache/mlx-model/models/`
+Friday supports any MLX-compatible instruct model. Download models from HuggingFace's mlx-community:
 
-2. Supported models include:
-   - Llama 3.2 (1B, 3B)
-   - Llama 3.1 (8B)
-   - Mistral 7B
-   - Phi-3.5 Mini
+1. Open Settings → Model
+2. Enter a HuggingFace URL for an mlx-community model, or use one of the quick download options
+3. Friday will download and manage the model for you
 
-3. Configure your preferred model in Settings
+**Supported model types:**
+- Text instruct models (Llama, Mistral, Phi, Qwen, Gemma, etc.)
+- Vision instruct models (for image understanding)
+- Any model with MLX format available on HuggingFace
+
+Models are stored at: `~/.cache/mlx-model/models/`
 
 ## Usage
 
