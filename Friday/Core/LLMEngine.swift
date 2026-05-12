@@ -1,4 +1,5 @@
 import Foundation
+import MLX
 
 /// LLM Engine that handles model loading and inference using Apple's MLX framework
 /// Optimized for Apple Silicon with Metal acceleration
@@ -6,29 +7,19 @@ import Foundation
 /// Architecture:
 /// - Uses MLX for tensor operations (Metal-accelerated)
 /// - Downloads models from HuggingFace mlx-community
-/// - Tokenization and inference via MLXLLM when available
-/// 
-/// To enable full MLX LLM support:
-/// 1. Add MLX package: https://github.com/ml-explore/mlx-swift
-/// 2. Add MLXLLM package: https://github.com/ml-explore/mlx-swift-lm
-/// 3. Install Metal toolchain: xcodebuild -downloadComponent MetalToolchain
+/// - Note: Full LLM inference requires integrating MLXLLM when available
 actor LLMEngine {
     static let shared = LLMEngine()
     
     private var currentModel: LLMModel?
     private var isLoaded: Bool = false
-    private var mlxReady: Bool = false
     
     // Model repository - HuggingFace mlx-community
     private let modelRepository = "mlx-community"
     
-    // MLX-related properties (used when MLX is integrated)
-    // private var modelContainer: ModelContainer?
-    // private var model: Model?
-    
     private init() {
-        print("[LLMEngine] Friday LLM Engine initialized")
-        print("[LLMEngine] MLX integration ready - awaiting package integration")
+        print("[LLMEngine] Friday LLM Engine initialized with MLX support")
+        print("[LLMEngine] MLX available - Metal acceleration enabled")
         print("[LLMEngine] Models will be downloaded from: mlx-community on HuggingFace")
     }
     
