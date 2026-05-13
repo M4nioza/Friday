@@ -29,48 +29,31 @@ actor ContextManager {
         brainQuery: String? = nil,
         systemPrompt: String? = nil
     ) async -> String {
-        var contextParts: [String] = []
+        // Start with system prompt only
+        var context = ""
         
-        // 1. System prompt
         if let systemPrompt = systemPrompt {
-            contextParts.append("=== SYSTEM ===\n\(systemPrompt)")
+            context = systemPrompt
         } else {
-            contextParts.append(getDefaultSystemPrompt())
+            context = getDefaultSystemPrompt()
         }
         
-        // 2. Persistent context
-        for piece in persistentContext {
-            contextParts.append("=== \(piece.label.uppercased()) ===\n\(piece.content)")
-        }
-        
-        // 3. Brain context
+        // Add memory context only if relevant memories exist
         if includeBrainContext {
             let query = brainQuery ?? extractTopicFromMessages(messages)
-            let brainContext = await BrainSystem.shared.buildContext(for: query)
-            if !brainContext.isEmpty {
-                contextParts.append("=== MEMORY CONTEXT ===\n\(brainContext)")
+            let memories = await BrainSystem.shared.searchMemories(query: query)
+            
+            // Only add memory context if there are relevant results
+            if !memories.isEmpty {
+                context += "\n\nThings I remember about this:\n"
+                for memory in memories.prefix(3) {
+                    context += "- \(memory.content)\n"
+                }
             }
+            // If no memories found, the model should just answer based on its training
         }
         
-        // 4. Deep memory links if relevant
-        if let brainQuery = brainQuery {
-            let deepContext = await BrainSystem.shared.getDeepContext(for: brainQuery)
-            if !deepContext.isEmpty {
-                contextParts.append(deepContext)
-            }
-        }
-        
-        // 5. Recent conversation history (limited)
-        let recentMessages = getRecentMessages(messages, maxTokens: 2000)
-        if !recentMessages.isEmpty {
-            contextParts.append("=== RECENT CONVERSATION ===")
-            for msg in recentMessages {
-                let role = msg.role == .user ? "USER" : "ASSISTANT"
-                contextParts.append("[\(role)]: \(msg.content)")
-            }
-        }
-        
-        return contextParts.joined(separator: "\n\n")
+        return context
     }
     
     /// Get recent messages within token limit
@@ -114,24 +97,21 @@ actor ContextManager {
     /// Get default system prompt
     private func getDefaultSystemPrompt() -> String {
         return """
-You are Friday, an intelligent local AI assistant running on Mac with MLX-optimized models.
+You are Friday, a helpful AI assistant on this Mac.
 
-IMPORTANT: You are a CLI-style assistant. When the user greets you (like "hello", "hi", "hey"), respond naturally and briefly as a helpful assistant would. DO NOT write code snippets, Python scripts, or anything similar unless specifically asked.
+CHATTING: Just talk normally. If the user says hello, say hello back and ask how you can help.
 
-Your capabilities:
-- Answer questions helpfully and conversationally
-- Execute tasks on the Mac (file operations, app control)
-- Remember important information across conversations
-- Break down complex requests into steps when needed
+LEARNING: If you don't know something the user tells you, remember it by saying "I'll remember that" and then summarize the key point in your response.
 
-Guidelines:
-1. Be conversational and helpful - like a smart friend assisting you
-2. Keep responses natural and focused on what the user needs
-3. Don't write code unless the user asks for it
-4. All processing happens locally - conversations are private
-5. Use your memory to remember user preferences and important facts
+MEMORY CATEGORIES (for storing new info):
+- identity: Who you are, your purpose
+- facts: General facts about the user or world
+- learned: Things the user told you about themselves
+- preferences: User likes/dislikes, settings
+- projects: Ongoing work or tasks
+- conversations: Important conversation summaries
 
-When the user just says hello or a greeting, respond warmly and ask how you can help them today.
+Keep responses conversational and concise. No code or lists unless asked.
 """
     }
     

@@ -5,9 +5,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var window: NSWindow?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Initialize the Brain system
+        // Initialize the Brain system synchronously
         Task {
+            print("[AppDelegate] Initializing Brain system...")
             await BrainSystem.shared.initialize()
+            
+            // Log brain stats after initialization
+            let stats = BrainSystem.shared.getStatistics()
+            print("[AppDelegate] Brain initialized - Total memories: \(stats.totalMemories)")
         }
         
         // Create the main window

@@ -35,6 +35,8 @@ targets:
         LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         COMBINE_HIDPI_IMAGES: YES
+        SYMROOT: build
+        OBJROOT: build
     entitlements:
       path: Friday/Friday.entitlements
       properties:
