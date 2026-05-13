@@ -193,15 +193,16 @@ actor BrainSystem {
     /// Initialize the brain system
     func initialize() async {
         // Set up brain directory
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        guard let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else { return }
         let fridayDir = appSupport.appendingPathComponent("Friday", isDirectory: true)
-        brainDirectory = fridayDir.appendingPathComponent("Brain", isDirectory: true)
+        let dir = fridayDir.appendingPathComponent("Brain", isDirectory: true)
+        brainDirectory = dir
         
         // Create directory structure
-        try? FileManager.default.createDirectory(at: brainDirectory!, withIntermediateDirectories: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         
         for category in MemoryCategory.allCases {
-            let catDir = brainDirectory!.appendingPathComponent(category.directoryName, isDirectory: true)
+            let catDir = dir.appendingPathComponent(category.directoryName, isDirectory: true)
             try? FileManager.default.createDirectory(at: catDir, withIntermediateDirectories: true)
         }
         
@@ -271,13 +272,14 @@ actor BrainSystem {
     /// Delete a memory
     func deleteMemory(_ id: UUID) async {
         guard let memory = memoryIndex[id],
-              let category = MemoryCategory(rawValue: memory.category) else { return }
+              let category = MemoryCategory(rawValue: memory.category),
+              let brainDir = brainDirectory else { return }
         
         memoryIndex.removeValue(forKey: id)
         categoryIndex[category]?.removeAll { $0 == id }
         
         // Delete file
-        let filePath = brainDirectory!
+        let filePath = brainDir
             .appendingPathComponent(category.directoryName)
             .appendingPathComponent("\(id.uuidString).md")
         try? FileManager.default.removeItem(at: filePath)

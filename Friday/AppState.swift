@@ -15,8 +15,57 @@ final class AppState: ObservableObject {
     @Published var temperature: Double = 0.7
     @Published var maxTokens: Int = 2048
     
+    /// Activity log for tracking app events
+    @Published var activityLog: [ActivityLogEntry] = []
+    
+    /// Current loaded model state
+    @Published var isModelLoaded: Bool = false
+    @Published var loadedModelName: String = "No model"
+    
     private init() {
         loadSettings()
+        log("Friday started", category: .system)
+    }
+    
+    /// Update model loaded state
+    func updateModelState() async {
+        isModelLoaded = await LLMEngine.shared.isModelLoaded()
+        if let model = await LLMEngine.shared.getCurrentModel() {
+            loadedModelName = model.displayName
+        } else {
+            loadedModelName = "No model"
+        }
+    }
+    
+    /// Log an activity event
+    func log(_ message: String, category: ActivityCategory = .system) {
+        let entry = ActivityLogEntry(
+            timestamp: Date(),
+            message: message,
+            category: category
+        )
+        activityLog.insert(entry, at: 0)
+        
+        // Keep only last 500 entries
+        if activityLog.count > 500 {
+            activityLog.removeLast()
+        }
+        
+        // Also print for debugging
+        print("[\(category.rawValue.uppercased())] \(message)")
+    }
+    
+    /// Clear all activity logs
+    func clearLog() {
+        activityLog.removeAll()
+    }
+    
+    /// Get formatted log messages for display
+    func getLogMessages() -> [String] {
+        return activityLog.map { entry in
+            let timeStr = DateFormatter.localizedString(from: entry.timestamp, dateStyle: .none, timeStyle: .medium)
+            return "[\(timeStr)] [\(entry.category.rawValue.uppercased())] \(entry.message)"
+        }
     }
     
     func loadSettings() {
@@ -41,4 +90,19 @@ final class AppState: ObservableObject {
         defaults.set(temperature, forKey: "temperature")
         defaults.set(maxTokens, forKey: "maxTokens")
     }
+}
+
+enum ActivityCategory: String {
+    case chat = "chat"
+    case model = "model"
+    case memory = "memory"
+    case system = "system"
+    case task = "task"
+}
+
+struct ActivityLogEntry: Identifiable {
+    let id = UUID()
+    let timestamp: Date
+    let message: String
+    let category: ActivityCategory
 }

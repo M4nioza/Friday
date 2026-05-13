@@ -213,6 +213,7 @@ struct ModelManagerView: View {
                 try await LLMEngine.shared.loadModel(llmModel)
                 appState.currentModel = llmModel
                 appState.saveSettings()
+                await appState.updateModelState()
                 isModelLoaded = true
             } catch {
                 errorMessage = error.localizedDescription
@@ -224,6 +225,7 @@ struct ModelManagerView: View {
     private func unloadModel() {
         Task {
             await LLMEngine.shared.unloadModel()
+            await appState.updateModelState()
             isModelLoaded = false
         }
     }

@@ -8,9 +8,6 @@ struct ContentView: View {
     @State private var inputText: String = ""
     @State private var showingSidebar: Bool = true
     @State private var showLogPanel: Bool = false
-    @State private var isModelLoaded: Bool = false
-    @State private var currentModelName: String = "No model"
-    @State private var logMessages: [String] = []
     @State private var modelLoadingProgress: Double = 0
     @State private var isModelLoading: Bool = false
     
@@ -27,9 +24,6 @@ struct ContentView: View {
                 
                 // Status bar at bottom
                 StatusBarView(
-                    isModelLoaded: $isModelLoaded,
-                    currentModelName: $currentModelName,
-                    logMessages: $logMessages,
                     showLogPanel: $showLogPanel,
                     isModelLoading: $isModelLoading,
                     modelLoadingProgress: $modelLoadingProgress
@@ -50,34 +44,10 @@ struct ContentView: View {
             CommandPaletteView()
         }
         .task {
-            await checkModelStatus()
+            await appState.updateModelState()
+            let modelStatus = appState.isModelLoaded ? "LOADED" : "NOT LOADED"
+            appState.log("Model: \(appState.loadedModelName) [\(modelStatus)]", category: .model)
         }
-        .task {
-            // Periodically update model status every 2 seconds
-            while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 2_000_000_000)
-                await checkModelStatus()
-            }
-        }
-    }
-    
-    private func checkModelStatus() async {
-        isModelLoaded = await LLMEngine.shared.isModelLoaded()
-        if let model = await LLMEngine.shared.getCurrentModel() {
-            currentModelName = model.displayName
-        }
-        
-        // Log initial status
-        addLog("Friday started. Model: \(currentModelName) [\(isModelLoaded ? "LOADED" : "NOT LOADED")]")
-    }
-    
-    private func addLog(_ message: String) {
-        let timestamp = DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .medium)
-        logMessages.insert("[\(timestamp)] \(message)", at: 0)
-        if logMessages.count > 100 {
-            logMessages.removeLast()
-        }
-        print("[Status] \(message)")
     }
 }
 
@@ -370,20 +340,18 @@ struct SidebarView: View {
 
 /// Status bar showing model status and logs at the bottom of the app
 struct StatusBarView: View {
-    @Binding var isModelLoaded: Bool
-    @Binding var currentModelName: String
-    @Binding var logMessages: [String]
     @Binding var showLogPanel: Bool
     @Binding var isModelLoading: Bool
     @Binding var modelLoadingProgress: Double
     
+    @EnvironmentObject var appState: AppState
     @State private var isExpanded: Bool = false
     
     var body: some View {
         VStack(spacing: 0) {
             // Expandable log panel
             if showLogPanel {
-                LogPanelView(logMessages: $logMessages)
+                ActivityLogPanelView()
                     .frame(height: 150)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
@@ -393,17 +361,17 @@ struct StatusBarView: View {
                 // Model status indicator
                 HStack(spacing: 8) {
                     Circle()
-                        .fill(isModelLoaded ? Color.green : Color.red)
+                        .fill(appState.isModelLoaded ? Color.green : Color.red)
                         .frame(width: 8, height: 8)
                     
                     if isModelLoading {
                         ProgressView()
                             .scaleEffect(0.6)
-                        Text("Loading \(currentModelName)...")
+                        Text("Loading \(appState.loadedModelName)...")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     } else {
-                        Text(isModelLoaded ? "Model: \(currentModelName)" : "No model loaded")
+                        Text(appState.isModelLoaded ? "Model: \(appState.loadedModelName)" : "No model loaded")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -447,9 +415,9 @@ struct StatusBarView: View {
     }
 }
 
-/// Log panel showing application logs
-struct LogPanelView: View {
-    @Binding var logMessages: [String]
+/// Activity log panel showing application logs from centralized logger
+struct ActivityLogPanelView: View {
+    @EnvironmentObject var appState: AppState
     @State private var autoScroll: Bool = true
     
     var body: some View {
@@ -473,19 +441,25 @@ struct LogPanelView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 2) {
-                        ForEach(Array(logMessages.enumerated()), id: \.offset) { index, message in
-                            Text(message)
-                                .font(.system(size: 10, design: .monospaced))
-                                .foregroundColor(.secondary)
-                                .id(index)
+                        ForEach(appState.activityLog) { entry in
+                            HStack(alignment: .top, spacing: 4) {
+                                Text(categoryIcon(entry.category))
+                                    .font(.system(size: 8))
+                                    .foregroundColor(categoryColor(entry.category))
+                                Text(entry.message)
+                                    .font(.system(size: 10, design: .monospaced))
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                            }
+                            .id(entry.id)
                         }
                     }
                     .padding(8)
                 }
-                .onChange(of: logMessages.count) { _, _ in
-                    if autoScroll, let lastIndex = logMessages.indices.last {
+                .onChange(of: appState.activityLog.count) { _, _ in
+                    if autoScroll, let lastEntry = appState.activityLog.first {
                         withAnimation {
-                            proxy.scrollTo(lastIndex, anchor: .bottom)
+                            proxy.scrollTo(lastEntry.id, anchor: .top)
                         }
                     }
                 }
@@ -493,5 +467,25 @@ struct LogPanelView: View {
             .background(Color.black.opacity(0.1))
         }
         .background(Color(nsColor: .windowBackgroundColor))
+    }
+    
+    private func categoryIcon(_ category: ActivityCategory) -> String {
+        switch category {
+        case .chat: return "💬"
+        case .model: return "🤖"
+        case .memory: return "🧠"
+        case .system: return "⚙️"
+        case .task: return "📋"
+        }
+    }
+    
+    private func categoryColor(_ category: ActivityCategory) -> Color {
+        switch category {
+        case .chat: return .blue
+        case .model: return .green
+        case .memory: return .purple
+        case .system: return .gray
+        case .task: return .orange
+        }
     }
 }

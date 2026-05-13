@@ -125,13 +125,17 @@ actor LLMEngine {
         self.currentModelId = modelId
         self.isLoaded = true
         print("[LLMEngine] Model ready: \(modelId)")
+        
+        // Update AppState with new model info
+        await AppState.shared.updateModelState()
     }
     
     /// Unload the current model
-    func unloadModel() {
+    func unloadModel() async {
         currentModelId = nil
         isLoaded = false
         print("[LLMEngine] Model unloaded")
+        await AppState.shared.updateModelState()
     }
     
     /// Get current model info
@@ -176,13 +180,13 @@ actor LLMEngine {
         // Write prompt to file
         try prompt.write(to: promptFile, atomically: true, encoding: .utf8)
         
-        // Run mlx_lm generate with file input
+        // Run mlx_lm generate with file input via stdin
         let process = Process()
         process.executableURL = URL(fileURLWithPath: mlxBinary)
         process.arguments = [
             "generate",
             "--model", modelId,
-            "--prompt", "@\(promptFile.path)",
+            "--prompt", "-",
             "--max-tokens", "\(maxTokens)",
             "--temp", "\(temperature)"
         ]
@@ -193,8 +197,13 @@ actor LLMEngine {
         process.standardError = errorPipe
         
         do {
+            let fileHandle = try FileHandle(forReadingFrom: promptFile)
+            process.standardInput = fileHandle
+            
             try process.run()
             process.waitUntilExit()
+            
+            fileHandle.closeFile()
         } catch {
             try? FileManager.default.removeItem(at: promptFile)
             throw LLMEngineError.inferenceFailed(error.localizedDescription)

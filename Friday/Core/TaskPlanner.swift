@@ -164,84 +164,84 @@ actor TaskPlanner {
         )
     }
     
-    private func parseAction(from actionData: [String: Any]) throws -> StepAction {
-        guard let type = actionData["type"] as? String else {
+    private func parseAction(from actionData: [String: AnyCodable]) throws -> StepAction {
+        guard let type = actionData["type"]?.value as? String else {
             throw PlanningError.invalidAction
         }
         
         switch type {
         case "launchApp":
-            guard let bundleId = actionData["bundleId"] as? String else {
+            guard let bundleId = actionData["bundleId"]?.value as? String else {
                 throw PlanningError.invalidAction
             }
             return .launchApp(bundleId: bundleId)
             
         case "closeApp":
-            guard let bundleId = actionData["bundleId"] as? String else {
+            guard let bundleId = actionData["bundleId"]?.value as? String else {
                 throw PlanningError.invalidAction
             }
             return .closeApp(bundleId: bundleId)
             
         case "readFile":
-            guard let path = actionData["path"] as? String else {
+            guard let path = actionData["path"]?.value as? String else {
                 throw PlanningError.invalidAction
             }
             return .readFile(path: path)
             
         case "writeFile":
-            guard let path = actionData["path"] as? String,
-                  let content = actionData["content"] as? String else {
+            guard let path = actionData["path"]?.value as? String,
+                  let content = actionData["content"]?.value as? String else {
                 throw PlanningError.invalidAction
             }
             return .writeFile(path: path, content: content)
             
         case "createDirectory":
-            guard let path = actionData["path"] as? String else {
+            guard let path = actionData["path"]?.value as? String else {
                 throw PlanningError.invalidAction
             }
             return .createDirectory(path: path)
             
         case "deleteItem":
-            guard let path = actionData["path"] as? String else {
+            guard let path = actionData["path"]?.value as? String else {
                 throw PlanningError.invalidAction
             }
             return .deleteItem(path: path)
             
         case "executeAppleScript":
-            guard let script = actionData["script"] as? String else {
+            guard let script = actionData["script"]?.value as? String else {
                 throw PlanningError.invalidAction
             }
             return .executeAppleScript(script: script)
             
         case "uiClick":
-            let x = actionData["x"] as? Int ?? 0
-            let y = actionData["y"] as? Int ?? 0
+            let x = actionData["x"]?.value as? Int ?? 0
+            let y = actionData["y"]?.value as? Int ?? 0
             return .uiClick(x: x, y: y)
             
         case "uiType":
-            guard let text = actionData["text"] as? String else {
+            guard let text = actionData["text"]?.value as? String else {
                 throw PlanningError.invalidAction
             }
             return .uiType(text: text)
             
         case "wait":
-            let seconds = actionData["seconds"] as? Double ?? 1.0
+            let seconds = actionData["seconds"]?.value as? Double ?? 1.0
             return .wait(seconds: seconds)
             
         case "think":
-            let reasoning = actionData["reasoning"] as? String ?? ""
+            let reasoning = actionData["reasoning"]?.value as? String ?? ""
             return .think(reasoning: reasoning)
             
         case "askUser":
-            let question = actionData["question"] as? String ?? ""
+            let question = actionData["question"]?.value as? String ?? ""
             return .askUser(question: question)
             
         case "callLLM":
-            let prompt = actionData["prompt"] as? String ?? ""
+            let prompt = actionData["prompt"]?.value as? String ?? ""
             return .callLLM(prompt: prompt)
             
         case "rememberToBrain":
-            let fact = actionData["fact"] as? String ?? ""
+            let fact = actionData["fact"]?.value as? String ?? ""
             return .rememberToBrain(fact: fact)
             
         default:

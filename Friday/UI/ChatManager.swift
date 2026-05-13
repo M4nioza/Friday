@@ -48,7 +48,7 @@ final class ChatManager: ObservableObject {
         isProcessing = true
         error = nil
         
-        print("[ChatManager] User message: \(content)")
+        AppState.shared.log("User: \(content.prefix(50))...", category: .chat)
         
         // Add user message
         let userMessage = ChatMessage(role: .user, content: content)
@@ -58,22 +58,22 @@ final class ChatManager: ObservableObject {
             // Check if model is loaded, if not load default
             var modelLoaded = await LLMEngine.shared.isModelLoaded()
             if !modelLoaded {
-                print("[ChatManager] No model loaded, loading default model...")
+                AppState.shared.log("Loading default model...", category: .model)
                 let defaultModel = AppState.shared.currentModel
                 try await LLMEngine.shared.loadModel(defaultModel)
-                modelLoaded = true
+                await AppState.shared.updateModelState()
+                AppState.shared.log("Model loaded: \(defaultModel.displayName)", category: .model)
             }
             
             let currentModel = await LLMEngine.shared.getCurrentModel()
-            print("[ChatManager] Model status - Loaded: \(modelLoaded), Model: \(currentModel?.displayName ?? "Unknown")")
             
             // Build context
-            print("[ChatManager] Building context...")
+            AppState.shared.log("Building context...", category: .memory)
             let context = await ContextManager.shared.buildContext(
                 messages: messages,
                 brainQuery: content
             )
-            print("[ChatManager] Context built, length: \(context.count) chars")
+            AppState.shared.log("Context: \(context.count) chars", category: .memory)
             
             // Create system message with context
             let systemMessage = ChatMessage(
@@ -82,7 +82,7 @@ final class ChatManager: ObservableObject {
             )
             
             // Generate response
-            print("[ChatManager] Calling LLMEngine.generate()...")
+            AppState.shared.log("Generating response...", category: .chat)
             let fullMessages = [systemMessage] + messages
             let response = try await LLMEngine.shared.generate(
                 messages: fullMessages,
@@ -90,7 +90,7 @@ final class ChatManager: ObservableObject {
                 maxTokens: AppState.shared.maxTokens
             )
             
-            print("[ChatManager] Response received, length: \(response.count) chars")
+            AppState.shared.log("Response: \(response.count) chars", category: .chat)
             
             // Add assistant response
             let assistantMessage = ChatMessage(
@@ -112,7 +112,7 @@ final class ChatManager: ObservableObject {
             saveConversations()
             
         } catch {
-            print("[ChatManager] Error: \(error.localizedDescription)")
+            AppState.shared.log("Error: \(error.localizedDescription)", category: .chat)
             self.error = error.localizedDescription
             
             // Add error message
@@ -132,6 +132,8 @@ final class ChatManager: ObservableObject {
         
         isProcessing = true
         error = nil
+        
+        AppState.shared.log("Task started: \(task.prefix(50))...", category: .task)
         
         // Add planning message
         let planningMessage = ChatMessage(
@@ -153,6 +155,7 @@ final class ChatManager: ObservableObject {
             )
             
             var plan = try await TaskPlanner.shared.createPlan(from: task, context: context)
+            AppState.shared.log("Plan created: \(plan.steps.count) steps", category: .task)
             
             // Update message with plan
             var planMessage = planningMessage
@@ -172,6 +175,8 @@ final class ChatManager: ObservableObject {
                 step.status = .inProgress
                 plan.steps[stepIndex] = step
                 
+                AppState.shared.log("Executing step \(stepIndex + 1)/\(plan.steps.count): \(step.description)", category: .task)
+                
                 // Update message with progress
                 planMessage.content = "Executing step \(stepIndex + 1)/\(plan.steps.count): \(step.description)"
                 if let msgIndex = messages.firstIndex(where: { $0.id == planningMessage.id }) {
@@ -186,11 +191,15 @@ final class ChatManager: ObservableObject {
                     completedStep.result = result
                     plan.steps[stepIndex] = completedStep
                     
+                    AppState.shared.log("Step \(stepIndex + 1) completed", category: .task)
+                    
                 } catch {
                     var failedStep = step
                     failedStep.status = .failed
                     failedStep.error = error.localizedDescription
                     plan.steps[stepIndex] = failedStep
+                    
+                    AppState.shared.log("Step \(stepIndex + 1) failed: \(error.localizedDescription)", category: .task)
                     
                     planMessage.content += "\n\n⚠️ Step failed: \(error.localizedDescription)"
                     if let msgIndex = messages.firstIndex(where: { $0.id == planningMessage.id }) {
@@ -202,12 +211,16 @@ final class ChatManager: ObservableObject {
             }
             
             // Final message
-            planMessage.content = "Task completed! I executed \(plan.steps.filter { $0.status == .completed }.count) out of \(plan.steps.count) steps successfully."
+            let completedCount = plan.steps.filter { $0.status == .completed }.count
+            planMessage.content = "Task completed! I executed \(completedCount) out of \(plan.steps.count) steps successfully."
             if let msgIndex = messages.firstIndex(where: { $0.id == planningMessage.id }) {
                 messages[msgIndex] = planMessage
             }
             
+            AppState.shared.log("Task completed: \(completedCount)/\(plan.steps.count) steps", category: .task)
+            
         } catch {
+            AppState.shared.log("Task planning failed: \(error.localizedDescription)", category: .task)
             self.error = error.localizedDescription
             
             let errorResponse = ChatMessage(
@@ -271,7 +284,7 @@ final class ChatManager: ObservableObject {
     // MARK: - Persistence
     
     private func loadConversations() {
-        let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        guard let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
         let conversationsFile = documentsPath.appendingPathComponent("Friday/conversations.json")
         
         guard let data = try? Data(contentsOf: conversationsFile),
@@ -283,7 +296,7 @@ final class ChatManager: ObservableObject {
     }
     
     private func saveConversations() {
-        let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        guard let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
         let fridayDir = documentsPath.appendingPathComponent("Friday")
         try? FileManager.default.createDirectory(at: fridayDir, withIntermediateDirectories: true)
         

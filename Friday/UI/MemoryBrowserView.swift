@@ -49,7 +49,9 @@ struct MemoryBrowserView: View {
         .searchable(text: $searchText, prompt: "Search memories...")
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Done") { dismiss() }
+                Button(action: { dismiss() }) {
+                    Image(systemName: "xmark")
+                }
             }
             
             ToolbarItem(placement: .primaryAction) {

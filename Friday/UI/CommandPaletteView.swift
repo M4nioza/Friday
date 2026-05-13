@@ -76,6 +76,7 @@ struct CommandPaletteView: View {
             action: {
                 Task {
                     try? await LLMEngine.shared.loadModel(.defaultModel)
+                    await AppState.shared.updateModelState()
                 }
             }
         ),
@@ -87,6 +88,7 @@ struct CommandPaletteView: View {
             action: {
                 Task {
                     await LLMEngine.shared.unloadModel()
+                    await AppState.shared.updateModelState()
                 }
             }
         ),
@@ -159,6 +161,12 @@ struct CommandPaletteView: View {
         VStack(spacing: 0) {
             // Search field
             HStack {
+                Button(action: { dismiss() }) {
+                    Image(systemName: "xmark")
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+                
                 Image(systemName: "command")
                     .foregroundColor(.secondary)
                 TextField("Type a command...", text: $searchText)
