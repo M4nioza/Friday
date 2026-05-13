@@ -97,6 +97,8 @@ actor TaskPlanner {
         case askUser(question: String)
         case callLLM(prompt: String)
         case rememberToBrain(fact: String)
+        case openURL(url: String)
+        case extractWebData
     }
     
     /// Parse a user request into a structured plan
@@ -114,6 +116,8 @@ actor TaskPlanner {
         - Create, modify, and delete files
         - Execute AppleScript
         - UI automation (click, type)
+        - Open URLs in Safari browser
+        - Extract text data from the current web page
         
         Context:
         - Working directory: \(context.workingDirectory)
@@ -124,8 +128,10 @@ actor TaskPlanner {
         - description: Summary of the task
         - steps: Array of steps, each with:
           - description: What this step does
-          - action: The action type and parameters
+          - action: A single JSON object containing "type" (the action name) and its parameters (e.g., { "type": "openURL", "url": "..." })
         
+        CRITICAL: The `action` MUST be a single JSON object. Do not separate the action type and parameters into different keys.
+        If the Request starts with a slash command (e.g. /openURL, /launchApp), you MUST create a single-step plan that exactly matches the requested action and parameters.
         Be specific and break down complex tasks into atomic steps.
         Format the response as valid JSON only.
         """
@@ -133,20 +139,33 @@ actor TaskPlanner {
         // Get the plan from the LLM
         let llmResponse = try await LLMEngine.shared.generate(
             messages: [
-                ChatMessage(role: .system, content: "You are a task planning assistant. Always respond with valid JSON only."),
+                ChatMessage(role: .system, content: "You are a task planning assistant. Always respond with valid JSON only. Never include conversational text."),
                 ChatMessage(role: .user, content: planPrompt)
             ],
             temperature: 0.3,
             maxTokens: 1024
         )
         
+        // Clean the response from markdown blocks if they exist
+        var cleanJSON = llmResponse.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let startRange = cleanJSON.range(of: "{"),
+           let endRange = cleanJSON.range(of: "}", options: .backwards) {
+            cleanJSON = String(cleanJSON[startRange.lowerBound...endRange.upperBound])
+        }
+        
         // Parse the JSON response
-        guard let jsonData = llmResponse.data(using: .utf8) else {
+        guard let jsonData = cleanJSON.data(using: .utf8) else {
             throw PlanningError.invalidResponse
         }
         
         let decoder = JSONDecoder()
-        let parsedPlan = try decoder.decode(ParsedPlan.self, from: jsonData)
+        let parsedPlan: ParsedPlan
+        do {
+            parsedPlan = try decoder.decode(ParsedPlan.self, from: jsonData)
+        } catch {
+            print("[TaskPlanner] JSON Decoding error: \(error)\nRaw LLM output: \(llmResponse)")
+            throw PlanningError.stepFailed("Decoder error: \(error). Clean JSON: \(cleanJSON.prefix(300))...")
+        }
         
         // Convert to PlannedTask
         var steps: [TaskStep] = []
@@ -244,6 +263,15 @@ actor TaskPlanner {
             let fact = actionData["fact"]?.value as? String ?? ""
             return .rememberToBrain(fact: fact)
             
+        case "openURL":
+            guard let url = actionData["url"]?.value as? String else {
+                throw PlanningError.invalidAction
+            }
+            return .openURL(url: url)
+            
+        case "extractWebData":
+            return .extractWebData
+            
         default:
             throw PlanningError.unknownAction(type)
         }
@@ -309,6 +337,15 @@ actor TaskPlanner {
         case .rememberToBrain(let fact):
             await BrainSystem.shared.addMemory(fact: fact, category: .learned)
             return "Remembered: \(fact.prefix(50))..."
+            
+        case .openURL(let url):
+            try await planner.openWebURL(url: url)
+            return "Opened URL: \(url)"
+            
+        case .extractWebData:
+            let data = try await planner.extractWebPageText()
+            let preview = data.prefix(200)
+            return "Extracted web data (\(data.count) bytes): \(preview)..."
         }
     }
 }

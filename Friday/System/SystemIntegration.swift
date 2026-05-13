@@ -163,6 +163,36 @@ actor SystemIntegration {
         }
     }
     
+    // MARK: - Web Automation
+    
+    /// Open a URL in Safari
+    func openWebURL(url: String) async throws {
+        let script = """
+        tell application "Safari"
+            activate
+            if (count of windows) = 0 then
+                make new document with properties {URL:"\(url)"}
+            else
+                tell window 1 to make new tab with properties {URL:"\(url)"}
+                set current tab of window 1 to tab (count of tabs of window 1) of window 1
+            end if
+        end tell
+        """
+        _ = try await runAppleScript(script)
+    }
+    
+    /// Extract text from the active Safari tab
+    func extractWebPageText() async throws -> String {
+        let script = """
+        tell application "Safari"
+            if (count of documents) = 0 then return ""
+            return text of document 1
+        end tell
+        """
+        let result = try await runAppleScript(script)
+        return result ?? ""
+    }
+    
     // MARK: - UI Automation
     
     /// Click at screen coordinates

@@ -189,13 +189,77 @@ struct ProcessingIndicator: View {
     }
 }
 
+// MARK: - Slash Commands
+
+struct SlashCommand: Identifiable {
+    let id = UUID()
+    let command: String
+    let description: String
+    let template: String
+}
+
+let availableSlashCommands: [SlashCommand] = [
+    SlashCommand(command: "/openURL", description: "Open a URL in Safari", template: "/openURL url: "),
+    SlashCommand(command: "/extractWebData", description: "Extract text from the active Safari tab", template: "/extractWebData"),
+    SlashCommand(command: "/launchApp", description: "Launch an application by bundle ID", template: "/launchApp bundleId: "),
+    SlashCommand(command: "/closeApp", description: "Close an application", template: "/closeApp bundleId: "),
+    SlashCommand(command: "/readFile", description: "Read a file", template: "/readFile path: "),
+    SlashCommand(command: "/writeFile", description: "Write content to a file", template: "/writeFile path: \ncontent: "),
+    SlashCommand(command: "/createDirectory", description: "Create a directory", template: "/createDirectory path: "),
+    SlashCommand(command: "/deleteItem", description: "Delete a file or directory", template: "/deleteItem path: "),
+    SlashCommand(command: "/executeAppleScript", description: "Execute an AppleScript", template: "/executeAppleScript script: "),
+    SlashCommand(command: "/uiClick", description: "Click at coordinates", template: "/uiClick x: y: "),
+    SlashCommand(command: "/uiType", description: "Type text via UI", template: "/uiType text: "),
+    SlashCommand(command: "/wait", description: "Wait for seconds", template: "/wait seconds: "),
+    SlashCommand(command: "/think", description: "Think for reasoning", template: "/think reasoning: "),
+    SlashCommand(command: "/askUser", description: "Ask the user a question", template: "/askUser question: "),
+    SlashCommand(command: "/rememberToBrain", description: "Save a fact to the Brain", template: "/rememberToBrain fact: ")
+]
+
 /// Input area with text field and send button
 struct InputAreaView: View {
     @EnvironmentObject var chatManager: ChatManager
     @State private var inputText: String = ""
+    @State private var showSlashMenu = false
+    @State private var filteredCommands: [SlashCommand] = []
     
     var body: some View {
         VStack(spacing: 8) {
+            // Slash Command Menu
+            if showSlashMenu && !filteredCommands.isEmpty {
+                VStack(alignment: .leading, spacing: 0) {
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 0) {
+                            ForEach(filteredCommands) { cmd in
+                                Button(action: {
+                                    var words = inputText.components(separatedBy: .whitespacesAndNewlines)
+                                    _ = words.popLast()
+                                    let newText = words.joined(separator: " ") + (words.isEmpty ? "" : " ") + cmd.template
+                                    inputText = newText
+                                    showSlashMenu = false
+                                }) {
+                                    HStack {
+                                        Text(cmd.command).font(.system(.body, design: .monospaced)).bold()
+                                        Text(cmd.description).foregroundColor(.secondary)
+                                        Spacer()
+                                    }
+                                    .padding(.vertical, 8)
+                                    .padding(.horizontal, 12)
+                                    .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+                                .background(Color(nsColor: .controlBackgroundColor).opacity(0.8))
+                            }
+                        }
+                    }
+                    .frame(maxHeight: 200)
+                }
+                .background(Color(nsColor: .windowBackgroundColor))
+                .cornerRadius(8)
+                .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: -2)
+                .padding(.horizontal)
+            }
+            
             Divider()
             
             HStack(alignment: .bottom, spacing: 12) {
@@ -206,6 +270,20 @@ struct InputAreaView: View {
                     .padding(12)
                     .background(Color(nsColor: .controlBackgroundColor))
                     .cornerRadius(8)
+                    .onChange(of: inputText) { _, newValue in
+                        let words = newValue.components(separatedBy: .whitespacesAndNewlines)
+                        if let lastWord = words.last, lastWord.hasPrefix("/") {
+                            showSlashMenu = true
+                            let query = String(lastWord.dropFirst()).lowercased()
+                            if query.isEmpty {
+                                filteredCommands = availableSlashCommands
+                            } else {
+                                filteredCommands = availableSlashCommands.filter { $0.command.lowercased().contains(query) }
+                            }
+                        } else {
+                            showSlashMenu = false
+                        }
+                    }
                     .onSubmit {
                         sendMessage()
                     }
