@@ -10,56 +10,69 @@ struct MemoryBrowserView: View {
     @State private var isLoading: Bool = true
     
     var body: some View {
-        NavigationSplitView {
-            // Category sidebar
-            VStack(spacing: 0) {
-                List(selection: $selectedCategory) {
-                    Section("Categories") {
-                        Button(action: { selectedCategory = nil }) {
-                            Label("All Memories", systemImage: "brain")
-                        }
-                        .buttonStyle(.plain)
-                        .foregroundColor(selectedCategory == nil ? .blue : .primary)
-                        
-                        ForEach(BrainSystem.MemoryCategory.allCases, id: \.self) { category in
-                            Button(action: { selectedCategory = category }) {
-                                Label(category.rawValue.capitalized, systemImage: iconForCategory(category))
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                Text("Memory Browser")
+                    .font(.headline)
+                Spacer()
+                Button(action: { dismiss() }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding()
+            .background(Color(nsColor: .controlBackgroundColor))
+            
+            // Content area
+            HStack(spacing: 0) {
+                // Category sidebar
+                VStack(spacing: 0) {
+                    List(selection: $selectedCategory) {
+                        Section("Categories") {
+                            Button(action: { selectedCategory = nil }) {
+                                Label("All Memories", systemImage: "brain")
                             }
                             .buttonStyle(.plain)
-                            .foregroundColor(selectedCategory == category ? .blue : .primary)
+                            .foregroundColor(selectedCategory == nil ? .blue : .primary)
+                            
+                            ForEach(BrainSystem.MemoryCategory.allCases, id: \.self) { category in
+                                Button(action: { selectedCategory = category }) {
+                                    Label(category.rawValue.capitalized, systemImage: iconForCategory(category))
+                                }
+                                .buttonStyle(.plain)
+                                .foregroundColor(selectedCategory == category ? .blue : .primary)
+                            }
                         }
                     }
+                    .listStyle(.sidebar)
+                    
+                    Button(action: addNewMemory) {
+                        Label("Add Memory", systemImage: "plus")
+                    }
+                    .buttonStyle(.bordered)
+                    .padding()
                 }
-                .listStyle(.sidebar)
-            }
-        } detail: {
-            // Memory list and detail - use flexible layout
-            if selectedMemory != nil {
-                MemoryDetailView(memory: selectedMemory!, onDelete: deleteMemory)
-                    .frame(minWidth: 400)
-            } else {
-                MemoryListView(
-                    memories: filteredMemories,
-                    searchText: $searchText,
-                    onSelect: { selectedMemory = $0 }
-                )
-                .frame(minWidth: 300)
-            }
-        }
-        .searchable(text: $searchText, prompt: "Search memories...")
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button(action: { dismiss() }) {
-                    Image(systemName: "xmark")
-                }
-            }
-            
-            ToolbarItem(placement: .primaryAction) {
-                Button(action: addNewMemory) {
-                    Image(systemName: "plus")
+                .frame(width: 200)
+                .background(Color(nsColor: .controlBackgroundColor))
+                
+                Divider()
+                
+                // Memory list and detail
+                if selectedMemory != nil {
+                    MemoryDetailView(memory: selectedMemory!, onDelete: deleteMemory)
+                } else {
+                    MemoryListView(
+                        memories: filteredMemories,
+                        searchText: $searchText,
+                        onSelect: { selectedMemory = $0 }
+                    )
                 }
             }
         }
+        .frame(width: 800, height: 600)
         .task {
             await loadMemories()
         }

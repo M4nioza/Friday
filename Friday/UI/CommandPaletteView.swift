@@ -159,14 +159,23 @@ struct CommandPaletteView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Search field
+            // Header
             HStack {
+                Text("Command Palette")
+                    .font(.headline)
+                Spacer()
                 Button(action: { dismiss() }) {
-                    Image(systemName: "xmark")
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title2)
                         .foregroundColor(.secondary)
                 }
                 .buttonStyle(.plain)
-                
+            }
+            .padding()
+            .background(Color(nsColor: .controlBackgroundColor))
+            
+            // Search field
+            HStack {
                 Image(systemName: "command")
                     .foregroundColor(.secondary)
                 TextField("Type a command...", text: $searchText)
