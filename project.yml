@@ -17,7 +17,6 @@ settings:
     CODE_SIGN_STYLE: Manual
     DEVELOPMENT_TEAM: ""
     ENABLE_HARDENED_RUNTIME: YES
-    INFOPLIST_FILE: Friday/Info.plist
 
 targets:
   Friday:
@@ -26,13 +25,14 @@ targets:
     sources:
       - path: Friday
         excludes:
+          - "FridayCLI/**"
           - "*.xcodeproj"
           - "*.xcworkspace"
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.friday.assistant
         INFOPLIST_FILE: Friday/Info.plist
-        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks"
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path../Frameworks"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         COMBINE_HIDPI_IMAGES: YES
         SYMROOT: build
@@ -42,3 +42,24 @@ targets:
       properties:
         com.apple.security.app-sandbox: false
         com.apple.security.automation.apple-events: true
+
+  FridayCLI:
+    type: tool
+    platform: macOS
+    sources:
+      - path: FridayCLI
+      - path: Friday/Core
+      - path: Friday/Brain
+      - path: Friday/Core/LLMEngine.swift
+      - path: Friday/Core/LLMModel.swift
+      - path: Friday/Core/TaskPlanner.swift
+      - path: Friday/AppState.swift
+      - path: Friday/System/SystemIntegration.swift
+    settings:
+      base:
+        PRODUCT_NAME: friday
+        PRODUCT_BUNDLE_IDENTIFIER: com.friday.cli
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path../Frameworks"
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: CLI
+        SWIFT_OPTIMIZATION_LEVEL: "-Onone"
+        generateEmptyDirectories: true
