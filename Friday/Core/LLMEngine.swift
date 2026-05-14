@@ -267,11 +267,37 @@ actor LLMEngine {
     func downloadModel(modelName: String, progressHandler: @escaping (Double, String) -> Void) async throws -> LLMModel {
         let cleanName = modelName.replacingOccurrences(of: "mlx-community/", with: "")
         let displayName = cleanName.replacingOccurrences(of: "-", with: " ").capitalized
-        progressHandler(0.1, "Downloading model...")
+
+        progressHandler(0.05, "Starting download...")
+
+        let script = """
+from huggingface_hub import snapshot_download
+import os
+
+model_name = '\(modelName)'
+cache_dir = os.path.expanduser('~/.cache/huggingface/hub')
+
+def progress_callback(download_size, total_size):
+    if total_size > 0:
+        progress = download_size / total_size
+        print(f'PROGRESS:{progress}', flush=True)
+    print(f'STATUS:Downloaded {download_size / (1024*1024):.1f} MB', flush=True)
+
+try:
+    path = snapshot_download(
+        repo_id=model_name,
+        cache_dir=cache_dir,
+        resume_download=True,
+        progress_callback=progress_callback
+    )
+    print(f'SUCCESS:{path}', flush=True)
+except Exception as e:
+    print(f'ERROR:{e}', flush=True)
+"""
 
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/opt/miniconda3/bin/mlx_lm")
-        process.arguments = ["download", "--model", modelName]
+        process.executableURL = URL(fileURLWithPath: "/opt/miniconda3/bin/python3")
+        process.arguments = ["-c", script]
 
         let outputPipe = Pipe()
         let errorPipe = Pipe()
@@ -279,7 +305,51 @@ actor LLMEngine {
         process.standardError = errorPipe
 
         try process.run()
-        process.waitUntilExit()
+
+        // Wait for process on background thread
+        let output = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<String, Error>) in
+            Thread {
+                var result = ""
+                let outputHandle = outputPipe.fileHandleForReading
+                let errorHandle = errorPipe.fileHandleForReading
+
+                while process.isRunning {
+                    let data = outputHandle.readData(ofLength: 4096)
+                    if data.isEmpty { break }
+                    if let s = String(data: data, encoding: .utf8) {
+                        result += s
+                        // Parse progress
+                        if let range = s.range(of: "PROGRESS:") {
+                            let numStr = String(s[range.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines).prefix(while: { $0.isNumber || $0 == "." })
+                            if let p = Double(numStr) {
+                                Task { @MainActor in
+                                    progressHandler(p * 0.9, "Downloading...")
+                                }
+                            }
+                        }
+                    }
+                    Thread.sleep(forTimeInterval: 0.2)
+                }
+
+                process.waitUntilExit()
+                let remainingData = outputHandle.readDataToEndOfFile()
+                if let s = String(data: remainingData, encoding: .utf8) { result += s }
+
+                if process.terminationStatus != 0 {
+                    let errData = errorHandle.readDataToEndOfFile()
+                    let errMsg = String(data: errData, encoding: .utf8) ?? "Unknown error"
+                    continuation.resume(throwing: LLMEngineError.downloadFailed(errMsg))
+                } else {
+                    continuation.resume(returning: result)
+                }
+            }.start()
+        }
+
+        if output.contains("ERROR:") {
+            let lines = output.components(separatedBy: "\n")
+            let errorLines = lines.filter { $0.hasPrefix("ERROR:") }
+            throw LLMEngineError.downloadFailed(errorLines.joined(separator: "\n"))
+        }
 
         progressHandler(1.0, "Download complete")
         return LLMModel(name: cleanName, displayName: displayName, path: "huggingface://\(modelName)", contextLength: 4096, description: "MLX model from HuggingFace")
