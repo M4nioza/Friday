@@ -106,9 +106,9 @@ actor TaskPlanner {
         // Use the LLM to break down the request into steps
         let planPrompt = """
         Analyze the following user request and break it down into clear, executable steps.
-        
+
         Request: \(request)
-        
+
         Available capabilities:
         - Launch applications by bundle ID
         - Close applications
@@ -118,22 +118,28 @@ actor TaskPlanner {
         - UI automation (click, type)
         - Open URLs in Safari browser
         - Extract text data from the current web page
-        
+
         Context:
         - Working directory: \(context.workingDirectory)
         - Recent apps used: \(context.recentApps.joined(separator: ", "))
         - Current date: \(context.currentDate)
-        
-        Return a JSON plan with:
-        - description: Summary of the task
-        - steps: Array of steps, each with:
-          - description: What this step does
-          - action: A single JSON object containing "type" (the action name) and its parameters (e.g., { "type": "openURL", "url": "..." })
-        
-        CRITICAL: The `action` MUST be a single JSON object. Do not separate the action type and parameters into different keys.
-        If the Request starts with a slash command (e.g. /openURL, /launchApp), you MUST create a single-step plan that exactly matches the requested action and parameters.
-        Be specific and break down complex tasks into atomic steps.
-        Format the response as valid JSON only.
+
+        Return a SINGLE valid JSON object with this exact structure:
+        {
+          "description": "Brief summary of the task",
+          "steps": [
+            {
+              "description": "What this step does",
+              "action": { "type": "actionTypeName", "param1": "value1", "param2": "value2" }
+            },
+            {
+              "description": "Next step description",
+              "action": { "type": "anotherActionType", "param": "value" }
+            }
+          ]
+        }
+
+        IMPORTANT: Return EXACTLY one JSON object with "description" (string) and "steps" (array of objects). The "steps" array MUST contain objects with "description" and "action" keys. Do NOT return multiple separate JSON objects.
         """
         
         // Get the plan from the LLM
@@ -148,8 +154,13 @@ actor TaskPlanner {
         
         // Clean the response from markdown blocks if they exist
         var cleanJSON = llmResponse.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let startRange = cleanJSON.range(of: "{"),
-           let endRange = cleanJSON.range(of: "}", options: .backwards) {
+        if let startRange = cleanJSON.range(of: "```json") {
+            let afterBlock = cleanJSON[startRange.upperBound...]
+            if let blockEnd = afterBlock.range(of: "```") {
+                cleanJSON = String(afterBlock[..<blockEnd.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+        } else if let startRange = cleanJSON.range(of: "{"),
+                  let endRange = findMatchingBrace(json: cleanJSON, from: startRange.lowerBound) {
             cleanJSON = String(cleanJSON[startRange.lowerBound...endRange.upperBound])
         }
         
@@ -347,6 +358,47 @@ actor TaskPlanner {
             let preview = data.prefix(200)
             return "Extracted web data (\(data.count) bytes): \(preview)..."
         }
+    }
+
+    private func findMatchingBrace(json: String, from startIndex: String.Index) -> ClosedRange<String.Index>? {
+        var depth = 0
+        var inString = false
+        var escaped = false
+        var i = startIndex
+
+        while i < json.endIndex {
+            let char = json[i]
+            if escaped {
+                escaped = false
+                i = json.index(after: i)
+                continue
+            }
+            if char == "\\" {
+                escaped = true
+                i = json.index(after: i)
+                continue
+            }
+            if char == "\"" {
+                inString.toggle()
+                i = json.index(after: i)
+                continue
+            }
+            if inString {
+                i = json.index(after: i)
+                continue
+            }
+
+            if char == "{" {
+                depth += 1
+            } else if char == "}" {
+                depth -= 1
+                if depth == 0 {
+                    return startIndex...i
+                }
+            }
+            i = json.index(after: i)
+        }
+        return nil
     }
 }
 
