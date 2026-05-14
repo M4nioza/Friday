@@ -268,87 +268,65 @@ actor LLMEngine {
         let cleanName = modelName.replacingOccurrences(of: "mlx-community/", with: "")
         let displayName = cleanName.replacingOccurrences(of: "-", with: " ").capitalized
 
-        progressHandler(0.05, "Starting download...")
+        progressHandler(0.05, "Fetching model info...")
 
-        let script = """
-from huggingface_hub import snapshot_download
-import os
+        let hubCacheDir = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".cache")
+            .appendingPathComponent("huggingface")
+            .appendingPathComponent("hub")
 
-model_name = '\(modelName)'
-cache_dir = os.path.expanduser('~/.cache/huggingface/hub')
+        let modelDir = "models--\(modelName.replacingOccurrences(of: "/", with: "--"))"
+        let snapshotHash = UUID().uuidString.prefix(8)
+        let targetDir = hubCacheDir
+            .appendingPathComponent(modelDir)
+            .appendingPathComponent("snapshots")
+            .appendingPathComponent(String(snapshotHash))
 
-def progress_callback(download_size, total_size):
-    if total_size > 0:
-        progress = download_size / total_size
-        print(f'PROGRESS:{progress}', flush=True)
-    print(f'STATUS:Downloaded {download_size / (1024*1024):.1f} MB', flush=True)
+        try FileManager.default.createDirectory(at: targetDir, withIntermediateDirectories: true)
 
-try:
-    path = snapshot_download(
-        repo_id=model_name,
-        cache_dir=cache_dir,
-        resume_download=True,
-        progress_callback=progress_callback
-    )
-    print(f'SUCCESS:{path}', flush=True)
-except Exception as e:
-    print(f'ERROR:{e}', flush=True)
-"""
+        let treeURL = URL(string: "https://huggingface.co/api/models/\(modelName)/tree/main")!
+        var treeRequest = URLRequest(url: treeURL)
+        treeRequest.setValue("Friday-macOS/1.0", forHTTPHeaderField: "User-Agent")
 
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/opt/miniconda3/bin/python3")
-        process.arguments = ["-c", script]
-
-        let outputPipe = Pipe()
-        let errorPipe = Pipe()
-        process.standardOutput = outputPipe
-        process.standardError = errorPipe
-
-        try process.run()
-
-        // Wait for process on background thread
-        let output = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<String, Error>) in
-            Thread {
-                var result = ""
-                let outputHandle = outputPipe.fileHandleForReading
-                let errorHandle = errorPipe.fileHandleForReading
-
-                while process.isRunning {
-                    let data = outputHandle.readData(ofLength: 4096)
-                    if data.isEmpty { break }
-                    if let s = String(data: data, encoding: .utf8) {
-                        result += s
-                        // Parse progress
-                        if let range = s.range(of: "PROGRESS:") {
-                            let numStr = String(s[range.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines).prefix(while: { $0.isNumber || $0 == "." })
-                            if let p = Double(numStr) {
-                                Task { @MainActor in
-                                    progressHandler(p * 0.9, "Downloading...")
-                                }
-                            }
-                        }
-                    }
-                    Thread.sleep(forTimeInterval: 0.2)
-                }
-
-                process.waitUntilExit()
-                let remainingData = outputHandle.readDataToEndOfFile()
-                if let s = String(data: remainingData, encoding: .utf8) { result += s }
-
-                if process.terminationStatus != 0 {
-                    let errData = errorHandle.readDataToEndOfFile()
-                    let errMsg = String(data: errData, encoding: .utf8) ?? "Unknown error"
-                    continuation.resume(throwing: LLMEngineError.downloadFailed(errMsg))
-                } else {
-                    continuation.resume(returning: result)
-                }
-            }.start()
+        let (treeData, treeResponse) = try await URLSession.shared.data(for: treeRequest)
+        guard let httpResponse = treeResponse as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw LLMEngineError.downloadFailed("Failed to fetch model tree (HTTP \((treeResponse as? HTTPURLResponse)?.statusCode ?? -1))")
         }
 
-        if output.contains("ERROR:") {
-            let lines = output.components(separatedBy: "\n")
-            let errorLines = lines.filter { $0.hasPrefix("ERROR:") }
-            throw LLMEngineError.downloadFailed(errorLines.joined(separator: "\n"))
+        struct HFTreeFile: Decodable {
+            let type: String
+            let path: String
+            let size: Int?
+        }
+
+        let treeFiles = try JSONDecoder().decode([HFTreeFile].self, from: treeData)
+        let files = treeFiles.filter { $0.type == "file" }
+
+        guard !files.isEmpty else {
+            throw LLMEngineError.downloadFailed("No files found in model repository")
+        }
+
+        let totalFiles = files.count
+        var downloadedFiles = 0
+
+        for file in files {
+            progressHandler(0.05 + 0.85 * Double(downloadedFiles) / Double(totalFiles), "Downloading \(file.path)...")
+
+            let fileURL = URL(string: "https://huggingface.co/\(modelName)/resolve/main/\(file.path)")!
+            var req = URLRequest(url: fileURL)
+            req.setValue("Friday-macOS/1.0", forHTTPHeaderField: "User-Agent")
+            req.setValue("true", forHTTPHeaderField: "X-Request-Id")
+
+            let (data, response) = try await URLSession.shared.data(for: req)
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                throw LLMEngineError.downloadFailed("Failed to download \(file.path) (HTTP \((response as? HTTPURLResponse)?.statusCode ?? -1))")
+            }
+
+            let filePath = targetDir.appendingPathComponent(file.path)
+            try FileManager.default.createDirectory(at: filePath.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try data.write(to: filePath)
+
+            downloadedFiles += 1
         }
 
         progressHandler(1.0, "Download complete")
