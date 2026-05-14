@@ -13,7 +13,7 @@ final class AppState: ObservableObject {
     @Published var isProcessing: Bool = false
     @Published var currentModel: LLMModel = .defaultModel
     @Published var temperature: Double = 0.7
-    @Published var maxTokens: Int = 2048
+    @Published var maxTokens: Int = 150000
     @Published var showMessageMetadata: Bool = false
     @Published var showPerformanceMetrics: Bool = false
     

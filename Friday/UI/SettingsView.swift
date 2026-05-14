@@ -467,18 +467,50 @@ struct GenerationSettingsView: View {
             Label("Max Tokens", systemImage: "text.alignleft")
                 .font(.headline)
 
-            Stepper(value: $appState.maxTokens, in: 256...8192, step: 256) {
-                HStack {
-                    Text("Max Tokens:")
-                    Text("\(appState.maxTokens)")
-                        .foregroundColor(.secondary)
-                }
-                .font(.subheadline)
+            HStack(spacing: 12) {
+                TextField("Max Tokens", value: $appState.maxTokens, format: .number)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 120)
+                    .onChange(of: appState.maxTokens) { _, _ in
+                        appState.maxTokens = max(256, min(appState.maxTokens, 150000))
+                        appState.saveSettings()
+                    }
+
+                Text("tokens (256 - 150k)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            HStack(spacing: 8) {
+                quickTokenButton(4096, label: "4k")
+                quickTokenButton(8192, label: "8k")
+                quickTokenButton(32768, label: "32k")
+                quickTokenButton(65536, label: "64k")
+                quickTokenButton(150000, label: "150k")
             }
         }
         .padding()
         .cardBackground()
-        .onChange(of: appState.maxTokens) { _, _ in appState.saveSettings() }
+    }
+
+    private func quickTokenButton(_ tokens: Int, label: String) -> some View {
+        Button(action: {
+            appState.maxTokens = tokens
+            appState.saveSettings()
+        }) {
+            Text(label)
+                .font(.caption)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(appState.maxTokens == tokens ? Color.accentColor.opacity(0.15) : Color.clear)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(appState.maxTokens == tokens ? Color.accentColor : Color.secondary.opacity(0.2), lineWidth: 1)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+        }
+        .buttonStyle(.plain)
+        .foregroundColor(appState.maxTokens == tokens ? .accentColor : .primary)
     }
 
     private var presetsCard: some View {
