@@ -7,26 +7,18 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		27C9FC904172CC110FB06287 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4980384A323C78E7074210B /* AppState.swift */; };
-		33EAC70FC2650D0EC2B60653 /* ContextManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C510D1FCB590CC146828F4E /* ContextManager.swift */; };
 		355994E56A3DADB26F4910B6 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4980384A323C78E7074210B /* AppState.swift */; };
 		4CACA52CF38EA77F91AA1D66 /* MemoryBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75FF303AA2982369101A2128 /* MemoryBrowserView.swift */; };
-		4F08130178BAA57E46056EBE /* LLMEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4B62F8F339D7210D15BCA2F /* LLMEngine.swift */; };
-		53A9DA68F5A14DB7C2A97BAE /* BrainSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DEDAEC08CCC30FC41271487 /* BrainSystem.swift */; };
-		5C52AF99A458107DF1FABDE9 /* LLMModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02D80ACB88CADAC4D6F33CDF /* LLMModel.swift */; };
 		697886CFB2A39E063C9092A8 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AEBFC6B09E77DDE002D1091 /* main.swift */; };
 		78F6B8D1E273E197EF6B918C /* TaskPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A323BBE91B0DE01D5A4C2FDE /* TaskPlanner.swift */; };
 		94736A2E569F3F9CC845784C /* ChatManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1CF918004DB53EDFE02CAE /* ChatManager.swift */; };
 		9E7286BC70B62A99EA3D8277 /* ModelManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54BA29245B7FC491B0C00971 /* ModelManagerView.swift */; };
-		A03AE442C9AABDA9960AB44F /* SystemIntegration.swift in Sources */ = {isa = PBXBuildFile; fileRef = A360048790B79250D0F7A842 /* SystemIntegration.swift */; };
 		A3B4A1C6C261DE6B1BC34D6B /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C43800E91AC725610C62109C /* AppDelegate.swift */; };
 		ABEC57039B56F496F3A93EB3 /* CommandPaletteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAA1BF95B69990847377C69E /* CommandPaletteView.swift */; };
-		ACDCEE9534B44DDB8A394A9C /* TaskPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A323BBE91B0DE01D5A4C2FDE /* TaskPlanner.swift */; };
 		B451DFBEB30C0E9420D2C663 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BA0AE45E7070E47A181336E /* ContentView.swift */; };
 		B7F6C17B57BF0CE63EA14733 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BD23273C7028920FEE43D2F /* SettingsView.swift */; };
 		BEAABC400151C78D6D6E5478 /* ContextManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C510D1FCB590CC146828F4E /* ContextManager.swift */; };
 		C8ED79459744061FB7449B75 /* LLMEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4B62F8F339D7210D15BCA2F /* LLMEngine.swift */; };
-		CF91C15E411DDD03331A300A /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6A4E23DF811C2555C2ED402 /* main.swift */; };
 		D13CD163EAE7C281132AF306 /* BrainSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DEDAEC08CCC30FC41271487 /* BrainSystem.swift */; };
 		EF66BE11E90999132E49BD0A /* LLMModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02D80ACB88CADAC4D6F33CDF /* LLMModel.swift */; };
 		F67019B8CAB4E19C36F3EA64 /* SystemIntegration.swift in Sources */ = {isa = PBXBuildFile; fileRef = A360048790B79250D0F7A842 /* SystemIntegration.swift */; };
@@ -35,7 +27,6 @@
 /* Begin PBXFileReference section */
 		02D80ACB88CADAC4D6F33CDF /* LLMModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMModel.swift; sourceTree = "<group>"; };
 		0BD23273C7028920FEE43D2F /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		1B88FD5FCB6941EB23F41C2E /* FridayCLI */ = {isa = PBXFileReference; includeInIndex = 0; path = FridayCLI; sourceTree = BUILT_PRODUCTS_DIR; };
 		1BA0AE45E7070E47A181336E /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		29D508F40C7D0C1FD5CAF20E /* Friday.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Friday.entitlements; sourceTree = "<group>"; };
 		39A3B17108AF73EEF30F26A1 /* Friday.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Friday.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -50,7 +41,6 @@
 		A360048790B79250D0F7A842 /* SystemIntegration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemIntegration.swift; sourceTree = "<group>"; };
 		A4B62F8F339D7210D15BCA2F /* LLMEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMEngine.swift; sourceTree = "<group>"; };
 		C43800E91AC725610C62109C /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		C6A4E23DF811C2555C2ED402 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		CAA1BF95B69990847377C69E /* CommandPaletteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandPaletteView.swift; sourceTree = "<group>"; };
 		F4980384A323C78E7074210B /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -70,7 +60,6 @@
 			isa = PBXGroup;
 			children = (
 				F3C99D8B127238FDB9F36D1B /* Friday */,
-				BD4575022096A872B1248FC4 /* FridayCLI */,
 				4A1B4EA29D7631AC0AB91B51 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -79,7 +68,6 @@
 			isa = PBXGroup;
 			children = (
 				39A3B17108AF73EEF30F26A1 /* Friday.app */,
-				1B88FD5FCB6941EB23F41C2E /* FridayCLI */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -90,14 +78,6 @@
 				A360048790B79250D0F7A842 /* SystemIntegration.swift */,
 			);
 			path = System;
-			sourceTree = "<group>";
-		};
-		BD4575022096A872B1248FC4 /* FridayCLI */ = {
-			isa = PBXGroup;
-			children = (
-				C6A4E23DF811C2555C2ED402 /* main.swift */,
-			);
-			path = FridayCLI;
 			sourceTree = "<group>";
 		};
 		D367B86CFE75C1D1FA9C97E4 /* UI */ = {
@@ -141,23 +121,6 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		9265F8C5E28DE181A859D158 /* FridayCLI */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 051B5C94053CE1A3BC345A59 /* Build configuration list for PBXNativeTarget "FridayCLI" */;
-			buildPhases = (
-				5967D5F37575112E5E5C2E19 /* Sources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = FridayCLI;
-			packageProductDependencies = (
-			);
-			productName = FridayCLI;
-			productReference = 1B88FD5FCB6941EB23F41C2E /* FridayCLI */;
-			productType = "com.apple.product-type.tool";
-		};
 		FC4FC60C7F3B801CCB777098 /* Friday */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 1DB4B19F19D791157FCFA6F8 /* Build configuration list for PBXNativeTarget "Friday" */;
@@ -184,10 +147,6 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1500;
 				TargetAttributes = {
-					9265F8C5E28DE181A859D158 = {
-						DevelopmentTeam = "";
-						ProvisioningStyle = Manual;
-					};
 					FC4FC60C7F3B801CCB777098 = {
 						DevelopmentTeam = "";
 						ProvisioningStyle = Manual;
@@ -209,7 +168,6 @@
 			projectRoot = "";
 			targets = (
 				FC4FC60C7F3B801CCB777098 /* Friday */,
-				9265F8C5E28DE181A859D158 /* FridayCLI */,
 			);
 		};
 /* End PBXProject section */
@@ -234,21 +192,6 @@
 				F67019B8CAB4E19C36F3EA64 /* SystemIntegration.swift in Sources */,
 				78F6B8D1E273E197EF6B918C /* TaskPlanner.swift in Sources */,
 				697886CFB2A39E063C9092A8 /* main.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		5967D5F37575112E5E5C2E19 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				27C9FC904172CC110FB06287 /* AppState.swift in Sources */,
-				53A9DA68F5A14DB7C2A97BAE /* BrainSystem.swift in Sources */,
-				33EAC70FC2650D0EC2B60653 /* ContextManager.swift in Sources */,
-				4F08130178BAA57E46056EBE /* LLMEngine.swift in Sources */,
-				5C52AF99A458107DF1FABDE9 /* LLMModel.swift in Sources */,
-				A03AE442C9AABDA9960AB44F /* SystemIntegration.swift in Sources */,
-				ACDCEE9534B44DDB8A394A9C /* TaskPlanner.swift in Sources */,
-				CF91C15E411DDD03331A300A /* main.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -320,6 +263,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_FILE = Friday/Info.plist;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
@@ -344,34 +288,6 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.friday.assistant;
 				SDKROOT = macosx;
 				SYMROOT = build;
-			};
-			name = Release;
-		};
-		A0867957B34EB59C01A83027 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				COMBINE_HIDPI_IMAGES = YES;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path../Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = com.friday.cli;
-				PRODUCT_NAME = friday;
-				SDKROOT = macosx;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = CLI;
-				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				generateEmptyDirectories = YES;
-			};
-			name = Debug;
-		};
-		CB47C252D21767FCD5DA071B /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				COMBINE_HIDPI_IMAGES = YES;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path../Frameworks";
-				PRODUCT_BUNDLE_IDENTIFIER = com.friday.cli;
-				PRODUCT_NAME = friday;
-				SDKROOT = macosx;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = CLI;
-				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				generateEmptyDirectories = YES;
 			};
 			name = Release;
 		};
@@ -431,6 +347,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				INFOPLIST_FILE = Friday/Info.plist;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
@@ -447,15 +364,6 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		051B5C94053CE1A3BC345A59 /* Build configuration list for PBXNativeTarget "FridayCLI" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				A0867957B34EB59C01A83027 /* Debug */,
-				CB47C252D21767FCD5DA071B /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Debug;
-		};
 		1DB4B19F19D791157FCFA6F8 /* Build configuration list for PBXNativeTarget "Friday" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
