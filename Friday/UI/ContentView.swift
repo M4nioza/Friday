@@ -521,6 +521,7 @@ struct InputAreaView: View {
     @State private var filteredCommands: [SlashCommand] = []
     @State private var isFocused = false
     @State private var isSendPressed = false
+    @State private var eventMonitor: Any?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -540,42 +541,80 @@ struct InputAreaView: View {
             .padding(.vertical, 12)
         }
         .background(Color(nsColor: .windowBackgroundColor))
+        .onAppear {
+            eventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+                if event.keyCode == 36 && event.modifierFlags.contains(.shift) {
+                    DispatchQueue.main.async {
+                        inputText += "\n"
+                    }
+                    return nil
+                }
+                return event
+            }
+        }
+        .onDisappear {
+            if let monitor = eventMonitor {
+                NSEvent.removeMonitor(monitor)
+            }
+        }
     }
 
     private var inputField: some View {
-        TextField("Ask Friday anything...", text: $inputText, axis: .vertical)
-            .textFieldStyle(.plain)
+        ZStack(alignment: .topLeading) {
+            textEditor
+
+            if inputText.isEmpty {
+                Text("Ask Friday anything...")
+                    .foregroundColor(.secondary.opacity(0.5))
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 18)
+                    .allowsHitTesting(false)
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: FridayTheme.cornerRadius))
+        .shadow(color: .black.opacity(0.05), radius: 8, y: -4)
+    }
+
+    private var textEditor: some View {
+        TextEditor(text: $inputText)
             .font(.body)
-            .lineLimit(1...5)
+            .frame(minHeight: 44, maxHeight: 120)
+            .scrollContentBackground(.hidden)
             .padding(14)
+            .background(textFieldBackground)
+            .onKeyPress(.escape) {
+                showSlashMenu = false
+                return .handled
+            }
+            .onKeyPress(.return) {
+                sendMessage()
+                return .handled
+            }
+            .onChange(of: inputText) { _, newValue in
+                handleTextChange(newValue)
+            }
+    }
+
+    private var textFieldBackground: some View {
+        RoundedRectangle(cornerRadius: FridayTheme.cornerRadius)
+            .stroke(isFocused ? Color.accentColor : Color.clear, lineWidth: 1.5)
             .background(
                 RoundedRectangle(cornerRadius: FridayTheme.cornerRadius)
-                    .stroke(isFocused ? Color.accentColor : Color.clear, lineWidth: 1.5)
-                    .background(
-                        RoundedRectangle(cornerRadius: FridayTheme.cornerRadius)
-                            .fill(Color(nsColor: .controlBackgroundColor).opacity(0.6))
-                    )
+                    .fill(Color(nsColor: .controlBackgroundColor).opacity(0.6))
             )
-            .clipShape(RoundedRectangle(cornerRadius: FridayTheme.cornerRadius))
-            .shadow(color: .black.opacity(0.05), radius: 8, y: -4)
-            .onChange(of: inputText) { _, newValue in
-                let words = newValue.components(separatedBy: CharacterSet.whitespacesAndNewlines)
-                if let lastWord = words.last, lastWord.hasPrefix("/") {
-                    showSlashMenu = true
-                    let query = String(lastWord.dropFirst()).lowercased()
-                    filteredCommands = query.isEmpty
-                        ? availableSlashCommands
-                        : availableSlashCommands.filter { $0.command.lowercased().contains(query) }
-                } else {
-                    showSlashMenu = false
-                }
-            }
-            .onSubmit {
-                sendMessage()
-            }
-            .onExitCommand {
-                showSlashMenu = false
-            }
+    }
+
+    private func handleTextChange(_ newValue: String) {
+        let words = newValue.components(separatedBy: CharacterSet.whitespacesAndNewlines)
+        if let lastWord = words.last, lastWord.hasPrefix("/") {
+            showSlashMenu = true
+            let query = String(lastWord.dropFirst()).lowercased()
+            filteredCommands = query.isEmpty
+                ? availableSlashCommands
+                : availableSlashCommands.filter { $0.command.lowercased().contains(query) }
+        } else {
+            showSlashMenu = false
+        }
     }
 
     private var sendButtons: some View {
