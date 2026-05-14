@@ -16,6 +16,7 @@ final class AppState: ObservableObject {
     @Published var maxTokens: Int = 150000
     @Published var showMessageMetadata: Bool = false
     @Published var showPerformanceMetrics: Bool = false
+    @Published var pendingExtractedData: String?
     
     /// Activity log for tracking app events
     @Published var activityLog: [ActivityLogEntry] = []

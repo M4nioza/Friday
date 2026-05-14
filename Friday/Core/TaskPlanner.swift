@@ -1,5 +1,25 @@
 import Foundation
 
+/// Temporary cache for extracted web data across task execution
+actor ExtractedDataCache {
+    static let shared = ExtractedDataCache()
+    private var webData: String?
+
+    func store(_ data: String) {
+        webData = data
+    }
+
+    func retrieve() -> String? {
+        return webData
+    }
+
+    func clear() {
+        webData = nil
+    }
+
+    private init() {}
+}
+
 /// Task Planner for complex multi-step operations
 actor TaskPlanner {
     static let shared = TaskPlanner()
@@ -355,8 +375,9 @@ actor TaskPlanner {
             
         case .extractWebData:
             let data = try await planner.extractWebPageText()
-            let preview = data.prefix(200)
-            return "Extracted web data (\(data.count) bytes): \(preview)..."
+            await ExtractedDataCache.shared.store(data)
+            let preview = String(data.prefix(500))
+            return "EXTRACTED_DATA:\(data.count) bytes extracted. DATA_PREVIEW:\(preview)"
         }
     }
 

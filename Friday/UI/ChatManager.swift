@@ -212,6 +212,20 @@ final class ChatManager: ObservableObject {
             // Final message
             let completedCount = plan.steps.filter { $0.status == .completed }.count
             planMessage.content = "Task completed! I executed \(completedCount) out of \(plan.steps.count) steps successfully."
+
+// Check for extracted web data
+            let extractedData = await ExtractedDataCache.shared.retrieve()
+            if extractedData != nil && !extractedData!.isEmpty {
+                planMessage.content += "\n\nI've extracted data from the webpage. What would you like me to do with it?\n\n"
+                planMessage.content += "1. **Save to file** - I can save it to a file (just tell me the filename)\n"
+                planMessage.content += "2. **Store in memory** - I can save it to my memory bank for later reference\n"
+                planMessage.content += "3. **Just keep it in this conversation** - I can summarize or analyze it for you\n\n"
+                planMessage.content += "Just tell me what you'd like to do!"
+
+                // Store in app state for later use
+                AppState.shared.pendingExtractedData = extractedData
+            }
+
             if let msgIndex = messages.firstIndex(where: { $0.id == planningMessage.id }) {
                 messages[msgIndex] = planMessage
             }

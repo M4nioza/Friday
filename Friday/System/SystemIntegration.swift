@@ -179,6 +179,8 @@ actor SystemIntegration {
         end tell
         """
         _ = try await runAppleScript(script)
+        // Wait for page to load
+        try await Task.sleep(nanoseconds: 2_000_000_000)
     }
     
     /// Extract text from the active Safari tab
