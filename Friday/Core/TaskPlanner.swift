@@ -119,6 +119,9 @@ actor TaskPlanner {
         case rememberToBrain(fact: String)
         case openURL(url: String)
         case extractWebData
+        case saveToFile(filename: String)
+        case storeInMemory(name: String)
+        case analyzeData
     }
     
     /// Parse a user request into a structured plan
@@ -302,7 +305,22 @@ actor TaskPlanner {
             
         case "extractWebData":
             return .extractWebData
-            
+
+        case "saveToFile":
+            guard let filename = actionData["filename"]?.value as? String else {
+                throw PlanningError.invalidAction
+            }
+            return .saveToFile(filename: filename)
+
+        case "storeInMemory":
+            guard let name = actionData["name"]?.value as? String else {
+                throw PlanningError.invalidAction
+            }
+            return .storeInMemory(name: name)
+
+        case "analyzeData":
+            return .analyzeData
+
         default:
             throw PlanningError.unknownAction(type)
         }
@@ -378,6 +396,40 @@ actor TaskPlanner {
             await ExtractedDataCache.shared.store(data)
             let preview = String(data.prefix(500))
             return "EXTRACTED_DATA:\(data.count) bytes extracted. DATA_PREVIEW:\(preview)"
+
+        case .saveToFile(let filename):
+            guard let data = await ExtractedDataCache.shared.retrieve() else {
+                return "ERROR: No extracted data to save"
+            }
+            let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+            let fridayDir = documentsPath.appendingPathComponent("Friday")
+            try? FileManager.default.createDirectory(at: fridayDir, withIntermediateDirectories: true)
+            let fileURL = fridayDir.appendingPathComponent(filename)
+            try data.write(to: fileURL, atomically: true, encoding: .utf8)
+            await ExtractedDataCache.shared.clear()
+            return "Saved \(data.count) bytes to \(filename)"
+
+        case .storeInMemory(let name):
+            guard let data = await ExtractedDataCache.shared.retrieve() else {
+                return "ERROR: No extracted data to store"
+            }
+            await BrainSystem.shared.addMemory(fact: "[\(name)]\n\(data)", category: .learned)
+            await ExtractedDataCache.shared.clear()
+            return "Stored \(data.count) bytes in memory as '\(name)'"
+
+        case .analyzeData:
+            guard let data = await ExtractedDataCache.shared.retrieve() else {
+                return "ERROR: No extracted data to analyze"
+            }
+            let (summary, _) = try await LLMEngine.shared.generate(
+                messages: [
+                    ChatMessage(role: .system, content: "You are a data analysis assistant. Summarize the provided data concisely."),
+                    ChatMessage(role: .user, content: "Please summarize this data:\n\n\(data.prefix(2000))")
+                ],
+                temperature: 0.5,
+                maxTokens: 1500
+            )
+            return "ANALYSIS:\n\(summary)"
         }
     }
 

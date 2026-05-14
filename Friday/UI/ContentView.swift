@@ -1198,6 +1198,9 @@ struct SlashCommand: Identifiable {
 let availableSlashCommands: [SlashCommand] = [
     SlashCommand(command: "/openURL", description: "Open a URL in Safari", template: "/openURL url: "),
     SlashCommand(command: "/extractWebData", description: "Extract text from the active Safari tab", template: "/extractWebData"),
+    SlashCommand(command: "/saveToFile", description: "Save pending data to a file", template: "/saveToFile filename: "),
+    SlashCommand(command: "/storeInMemory", description: "Store pending data in memory", template: "/storeInMemory name: "),
+    SlashCommand(command: "/analyzeData", description: "Analyze or summarize pending data", template: "/analyzeData"),
     SlashCommand(command: "/launchApp", description: "Launch an application by bundle ID", template: "/launchApp bundleId: "),
     SlashCommand(command: "/closeApp", description: "Close an application", template: "/closeApp bundleId: "),
     SlashCommand(command: "/readFile", description: "Read a file", template: "/readFile path: "),
