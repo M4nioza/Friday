@@ -44,7 +44,13 @@ final class ChatManager: ObservableObject {
     /// Send a message and get response
     func sendMessage(_ content: String) async {
         guard !isProcessing else { return }
-        
+
+        // Check if this is a slash command - route to task execution
+        if content.hasPrefix("/") {
+            await executeTask(content)
+            return
+        }
+
         isProcessing = true
         error = nil
         

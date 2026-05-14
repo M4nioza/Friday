@@ -126,6 +126,13 @@ actor TaskPlanner {
     
     /// Parse a user request into a structured plan
     func createPlan(from request: String, context: PlanningContext) async throws -> PlannedTask {
+        // Direct command handling for slash commands
+        if request.hasPrefix("/") {
+            if let task = try await handleSlashCommand(request) {
+                return task
+            }
+        }
+
         // Use the LLM to break down the request into steps
         let planPrompt = """
         Analyze the following user request and break it down into clear, executable steps.
@@ -141,6 +148,9 @@ actor TaskPlanner {
         - UI automation (click, type)
         - Open URLs in Safari browser
         - Extract text data from the current web page
+        - Save extracted data to a file
+        - Store extracted data in memory
+        - Analyze or summarize extracted data
 
         Context:
         - Working directory: \(context.workingDirectory)
@@ -213,6 +223,56 @@ actor TaskPlanner {
         
         return PlannedTask(
             description: parsedPlan.description,
+            steps: steps
+        )
+    }
+
+    private func handleSlashCommand(_ command: String) async throws -> PlannedTask? {
+        let parts = command.dropFirst().split(separator: " ", maxSplits: 1).map(String.init)
+        guard let cmdName = parts.first else { return nil }
+
+        var steps: [TaskStep] = []
+
+        switch cmdName {
+        case "saveToFile":
+            guard parts.count > 1 else {
+                throw PlanningError.stepFailed("Usage: /saveToFile filename")
+            }
+            steps.append(TaskStep(
+                description: "Save extracted data to file: \(parts[1])",
+                action: .saveToFile(filename: parts[1])
+            ))
+
+        case "storeInMemory":
+            guard parts.count > 1 else {
+                throw PlanningError.stepFailed("Usage: /storeInMemory name")
+            }
+            steps.append(TaskStep(
+                description: "Store extracted data in memory as: \(parts[1])",
+                action: .storeInMemory(name: parts[1])
+            ))
+
+        case "analyzeData":
+            steps.append(TaskStep(
+                description: "Analyze extracted data",
+                action: .analyzeData
+            ))
+
+        case "openURL":
+            guard parts.count > 1 else {
+                throw PlanningError.stepFailed("Usage: /openURL url")
+            }
+            steps.append(TaskStep(
+                description: "Open URL in Safari: \(parts[1])",
+                action: .openURL(url: parts[1])
+            ))
+
+        default:
+            return nil
+        }
+
+        return PlannedTask(
+            description: command,
             steps: steps
         )
     }
