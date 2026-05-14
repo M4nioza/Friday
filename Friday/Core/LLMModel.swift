@@ -81,14 +81,16 @@ struct ChatMessage: Identifiable, Codable, Hashable {
     var timestamp: Date
     var modelUsed: String?
     var actions: [ExecutedAction]?
-    
+    var metrics: String?
+
     init(
         id: UUID = UUID(),
         role: MessageRole,
         content: String,
         timestamp: Date = Date(),
         modelUsed: String? = nil,
-        actions: [ExecutedAction]? = nil
+        actions: [ExecutedAction]? = nil,
+        metrics: String? = nil
     ) {
         self.id = id
         self.role = role
@@ -96,6 +98,7 @@ struct ChatMessage: Identifiable, Codable, Hashable {
         self.timestamp = timestamp
         self.modelUsed = modelUsed
         self.actions = actions
+        self.metrics = metrics
     }
 }
 

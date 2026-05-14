@@ -26,6 +26,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             backing: .buffered,
             defer: false
         )
+
+        window?.titlebarAppearsTransparent = true
+        window?.titleVisibility = .hidden
+        window?.backgroundColor = .clear
         
         window?.center()
         window?.setFrameAutosaveName("FridayMainWindow")

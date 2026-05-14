@@ -137,7 +137,7 @@ actor TaskPlanner {
         """
         
         // Get the plan from the LLM
-        let llmResponse = try await LLMEngine.shared.generate(
+        let (llmResponse, _) = try await LLMEngine.shared.generate(
             messages: [
                 ChatMessage(role: .system, content: "You are a task planning assistant. Always respond with valid JSON only. Never include conversational text."),
                 ChatMessage(role: .user, content: planPrompt)
@@ -327,7 +327,7 @@ actor TaskPlanner {
             return "Waiting for user input: \(question)"
             
         case .callLLM(let prompt):
-            let result = try await LLMEngine.shared.generate(
+            let (result, _) = try await LLMEngine.shared.generate(
                 messages: [ChatMessage(role: .user, content: prompt)],
                 temperature: 0.7,
                 maxTokens: 1024

@@ -81,25 +81,26 @@ final class ChatManager: ObservableObject {
                 content: context
             )
             
-            // Generate response
+// Generate response
             AppState.shared.log("Generating response...", category: .chat)
             let fullMessages = [systemMessage] + messages
-            let response = try await LLMEngine.shared.generate(
+
+            let (response, metrics) = try await LLMEngine.shared.generate(
                 messages: fullMessages,
                 temperature: AppState.shared.temperature,
                 maxTokens: AppState.shared.maxTokens
             )
-            
+
             AppState.shared.log("Response: \(response.count) chars", category: .chat)
-            
-            // Add assistant response
+
             let assistantMessage = ChatMessage(
                 role: .assistant,
                 content: response,
-                modelUsed: currentModel?.displayName ?? "Unknown"
+                modelUsed: currentModel?.displayName ?? "Unknown",
+                metrics: AppState.shared.showPerformanceMetrics ? metrics : nil
             )
             messages.append(assistantMessage)
-            
+
             // Update current conversation
             if currentConversation == nil {
                 currentConversation = Conversation(title: String(content.prefix(50)), messages: messages)
@@ -107,22 +108,20 @@ final class ChatManager: ObservableObject {
                 currentConversation?.messages = messages
                 currentConversation?.updatedAt = Date()
             }
-            
+
             // Save conversations
             saveConversations()
-            
         } catch {
             AppState.shared.log("Error: \(error.localizedDescription)", category: .chat)
             self.error = error.localizedDescription
-            
-            // Add error message
+
             let errorMessage = ChatMessage(
                 role: .assistant,
                 content: "I encountered an error: \(error.localizedDescription). Please try again."
             )
             messages.append(errorMessage)
         }
-        
+
         isProcessing = false
     }
     

@@ -14,6 +14,8 @@ final class AppState: ObservableObject {
     @Published var currentModel: LLMModel = .defaultModel
     @Published var temperature: Double = 0.7
     @Published var maxTokens: Int = 2048
+    @Published var showMessageMetadata: Bool = false
+    @Published var showPerformanceMetrics: Bool = false
     
     /// Activity log for tracking app events
     @Published var activityLog: [ActivityLogEntry] = []
@@ -82,6 +84,14 @@ final class AppState: ObservableObject {
         if defaults.object(forKey: "maxTokens") != nil {
             maxTokens = defaults.integer(forKey: "maxTokens")
         }
+
+        if defaults.object(forKey: "showMessageMetadata") != nil {
+            showMessageMetadata = defaults.bool(forKey: "showMessageMetadata")
+        }
+
+        if defaults.object(forKey: "showPerformanceMetrics") != nil {
+            showPerformanceMetrics = defaults.bool(forKey: "showPerformanceMetrics")
+        }
     }
     
     func saveSettings() {
@@ -89,6 +99,8 @@ final class AppState: ObservableObject {
         defaults.set(currentModel.name, forKey: "selectedModel")
         defaults.set(temperature, forKey: "temperature")
         defaults.set(maxTokens, forKey: "maxTokens")
+        defaults.set(showMessageMetadata, forKey: "showMessageMetadata")
+        defaults.set(showPerformanceMetrics, forKey: "showPerformanceMetrics")
     }
 }
 
