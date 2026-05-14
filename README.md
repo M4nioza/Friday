@@ -32,27 +32,27 @@ A native macOS AI assistant powered by local MLX-based LLM models with persisten
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                    Friday App                        │
+│                    Friday App                       │
 ├─────────────────────────────────────────────────────┤
-│  UI Layer (SwiftUI)                                  │
-│  ├── ChatView                                        │
+│  UI Layer (SwiftUI)                                 │
+│  ├── ChatView                                       │
 │  ├── MemoryBrowserView                              │
 │  ├── CommandPaletteView                             │
-│  └── SettingsView                                    │
+│  └── SettingsView                                   │
 ├─────────────────────────────────────────────────────┤
-│  Core Engine                                         │
+│  Core Engine                                        │
 │  ├── LLMEngine (MLX Swift)                          │
 │  ├── TaskPlanner                                    │
 │  └── ContextManager                                 │
 ├─────────────────────────────────────────────────────┤
-│  Brain System                                        │
+│  Brain System                                       │
 │  ├── MemoryStore (Markdown files)                   │
 │  ├── LinkParser                                     │
 │  └── ContextGraph                                   │
 ├─────────────────────────────────────────────────────┤
-│  System Integration                                  │
+│  System Integration                                 │
 │  ├── AppController (NSWorkspace)                    │
-│  ├── FileSystemManager                               │
+│  ├── FileSystemManager                              │
 │  └── AccessibilityService                           │
 └─────────────────────────────────────────────────────┘
 ```
