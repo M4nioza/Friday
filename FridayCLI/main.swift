@@ -31,18 +31,8 @@ final class CLIRunner {
         // Initialize brain system
         await BrainSystem.shared.initialize()
 
-        // Check if model is loaded
-        var isLoaded = await LLMEngine.shared.isModelLoaded()
-        if !isLoaded {
-            print("\(ANSIColors.yellow)Loading model...\n\(ANSIColors.reset)")
-            do {
-                try await LLMEngine.shared.loadModel(AppState.shared.currentModel)
-                isLoaded = true
-                print("\(ANSIColors.green)Model loaded.\(ANSIColors.reset)\n")
-            } catch {
-                print("\(ANSIColors.yellow)Warning: \(error.localizedDescription)\(ANSIColors.reset)")
-            }
-        }
+        // Don't auto-load model - let user choose
+        print("\(ANSIColors.yellow)No model loaded. Use \(ANSIColors.reset)$ANSIColors.green load $ANSIColors.reset$ANSIColors.yellow to see available models.\(ANSIColors.reset)\n")
 
         printHelp()
 
@@ -63,7 +53,7 @@ final class CLIRunner {
     }
 
     private func isCommand(_ input: String) -> Bool {
-        let commands = ["help", "ask", "task", "open", "memory", "model", "clear", "context", "tokens", "ls", "pwd", "read", "write", "delete", "exec", "exit"]
+        let commands = ["help", "ask", "task", "open", "memory", "model", "load", "loadnum", "clear", "context", "tokens", "ls", "pwd", "read", "write", "delete", "exec", "exit"]
         let first = input.split(separator: " ").first.map(String.init)?.lowercased()
         return first.map { commands.contains($0) } ?? false
     }
@@ -71,11 +61,10 @@ final class CLIRunner {
     func printBanner() {
         let modelName = AppState.shared.currentModel.displayName
         print("""
-        \(ANSIColors.cyan)╔═══════════════════════════════════════════════════════════╗
-        ║\(ANSIColors.reset)  \(ANSIColors.bold)Friday CLI\(ANSIColors.reset) - Your AI Assistant                      \(ANSIColors.cyan)║
-        ║                                                                   ║
-        ║  Model: \(modelName)                                         ║
-        ╚═══════════════════════════════════════════════════════════╝\(ANSIColors.reset)
+        \(ANSIColors.cyan)╔═══════════════════════════════════════════════════════════════════╗
+        ║\(ANSIColors.reset)  \(ANSIColors.bold)Friday CLI\(ANSIColors.reset) - Your AI Assistant                        \(ANSIColors.cyan)║
+        ║\(ANSIColors.reset)  Model: \(modelName)                                             \(ANSIColors.cyan)║
+        \(ANSIColors.cyan)╚═══════════════════════════════════════════════════════════════════╝\(ANSIColors.reset)
         """)
     }
 
@@ -87,6 +76,8 @@ final class CLIRunner {
           \(ANSIColors.green)open <url>\(ANSIColors.reset)        - Open URL in Safari
           \(ANSIColors.green)memory <query>\(ANSIColors.reset)     - Search memories
           \(ANSIColors.green)model\(ANSIColors.reset)              - Show current model
+          \(ANSIColors.green)load\(ANSIColors.reset)               - List available models
+          \(ANSIColors.green)loadnum <n>\(ANSIColors.reset)         - Load model by number
           \(ANSIColors.green)context\(ANSIColors.reset)            - Show context settings
           \(ANSIColors.green)tokens <n>\(ANSIColors.reset)         - Set max tokens
           \(ANSIColors.green)clear\(ANSIColors.reset)              - Clear conversation
@@ -122,6 +113,29 @@ final class CLIRunner {
                 print("\(ANSIColors.green)Current model: \(model.displayName)\(ANSIColors.reset)")
             } else {
                 print("\(ANSIColors.yellow)No model loaded\(ANSIColors.reset)")
+            }
+
+        case "load":
+            print("\(ANSIColors.bold)Available models:\(ANSIColors.reset)")
+            for (i, model) in LLMModel.allModels.enumerated() {
+                print("  \(ANSIColors.cyan)[\(i + 1)]\(ANSIColors.reset) \(ANSIColors.green)\(model.displayName)\(ANSIColors.reset)")
+                print("      \(ANSIColors.dim)\(model.description)\(ANSIColors.reset)")
+            }
+            print("\n\(ANSIColors.yellow)Type: load <number> to load a model\(ANSIColors.reset)")
+
+        case "loadnum":
+            if let num = Int(args), num > 0, num <= LLMModel.allModels.count {
+                let model = LLMModel.allModels[num - 1]
+                print("\(ANSIColors.yellow)Loading \(model.displayName)...\n\(ANSIColors.reset)")
+                do {
+                    try await LLMEngine.shared.loadModel(model)
+                    await AppState.shared.updateModelState()
+                    print("\(ANSIColors.green)Model loaded successfully!\(ANSIColors.reset)")
+                } catch {
+                    print("\(ANSIColors.yellow)Failed to load: \(error.localizedDescription)\(ANSIColors.reset)")
+                }
+            } else {
+                print("\(ANSIColors.yellow)Usage: loadnum <number> (1-\(LLMModel.allModels.count))\(ANSIColors.reset)")
             }
 
         case "clear":
@@ -266,6 +280,12 @@ final class CLIRunner {
     }
 
     func chat(_ input: String) async {
+        // Check if model is loaded
+        guard await LLMEngine.shared.isModelLoaded() else {
+            print("\(ANSIColors.yellow)No model loaded. Use \(ANSIColors.reset)$ANSIColors.green load $ANSIColors.reset$ANSIColors.yellow to see available models.\(ANSIColors.reset)")
+            return
+        }
+
         let userMsg = ChatMessage(role: .user, content: input)
         conversationHistory.append(userMsg)
 
