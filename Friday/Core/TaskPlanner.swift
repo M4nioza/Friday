@@ -262,9 +262,10 @@ actor TaskPlanner {
             guard parts.count > 1 else {
                 throw PlanningError.stepFailed("Usage: /openURL url")
             }
+            let url = parts.dropFirst().joined(separator: " ").removingPercentEncoding ?? parts.dropFirst().joined(separator: " ")
             steps.append(TaskStep(
-                description: "Open URL in Safari: \(parts[1])",
-                action: .openURL(url: parts[1])
+                description: "Open URL in Safari: \(url)",
+                action: .openURL(url: url)
             ))
 
         default:
